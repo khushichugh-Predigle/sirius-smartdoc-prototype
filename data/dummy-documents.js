@@ -4289,6 +4289,7 @@ window.DUMMY_DOCUMENTS = [
     "document": "00000000000000000000000cdoc",
     "document_type": "Discharge Orders",
     "document_status": "in review",
+    "claimed_by": { "name": "Khushi C.", "initials": "KC" },
     "file": {
       "original_file_name": "301644_Referral_CarlosIbrahim_20260802_822599.PDF",
       "file_url": "assets/images/document-preview-placeholder.svg"
@@ -4999,6 +5000,7 @@ window.DUMMY_DOCUMENTS = [
     "document": "00000000000000000000000edoc",
     "document_type": "Referral",
     "document_status": "in review",
+    "claimed_by": { "name": "R. Alvarez", "initials": "RA" },
     "file": {
       "original_file_name": "301918_Referral_ThomasPark_20260811_848394.PDF",
       "file_url": "assets/images/document-preview-placeholder.svg"
@@ -5357,6 +5359,7 @@ window.DUMMY_DOCUMENTS = [
     "document": "00000000000000000000000fdoc",
     "document_type": "Referral",
     "document_status": "in review",
+    "claimed_by": { "name": "Khushi C.", "initials": "KC" },
     "file": {
       "original_file_name": "302055_Referral_JessicaWhitfield_20260818_720559.PDF",
       "file_url": "assets/images/document-preview-placeholder.svg"
@@ -7493,6 +7496,7 @@ window.DUMMY_DOCUMENTS = [
     "document": "000000000000000000000015doc",
     "document_type": "Referral",
     "document_status": "in review",
+    "claimed_by": { "name": "R. Alvarez", "initials": "RA" },
     "file": {
       "original_file_name": "302877_Referral_LisaReyes_20260805_346221.PDF",
       "file_url": "assets/images/document-preview-placeholder.svg"
