@@ -16,7 +16,25 @@
     ['site', 'Site', false],
   ];
 
-  const state = { search: '', orgTypeFilter: '', sortCol: 'name', sortAsc: true, editingId: null, formValues: {}, deleteId: null };
+  const state = {
+    search: '', orgTypeFilter: '', sortCol: 'name', sortAsc: true, editingId: null, formValues: {}, deleteId: null,
+    filterOpen: false, orgFilter: [], stateFilter: '', referralOnly: false, hasEmail: false, hasPhone: false,
+    createdFrom: '', createdTo: '', updatedFrom: '', updatedTo: '',
+  };
+
+  function activeFilterCount() {
+    let n = 0;
+    if (state.orgFilter.length) n++;
+    if (state.stateFilter) n++;
+    if (state.referralOnly) n++;
+    if (state.hasEmail) n++;
+    if (state.hasPhone) n++;
+    if (state.createdFrom || state.createdTo) n++;
+    if (state.updatedFrom || state.updatedTo) n++;
+    return n;
+  }
+
+  function dayMs(dateStr) { return dateStr ? new Date(dateStr + 'T00:00:00').getTime() : null; }
 
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
@@ -31,8 +49,22 @@
 
   function filtered() {
     const q = state.search.trim().toLowerCase();
+    const createdFrom = dayMs(state.createdFrom), createdTo = dayMs(state.createdTo);
+    const updatedFrom = dayMs(state.updatedFrom), updatedTo = dayMs(state.updatedTo);
     const list = (window.CONTACTS || []).filter((c) => {
       if (state.orgTypeFilter && c.org_type !== state.orgTypeFilter) return false;
+      if (state.orgFilter.length && !state.orgFilter.includes(c.organization)) return false;
+      if (state.stateFilter && c.state !== state.stateFilter) return false;
+      if (state.referralOnly && !c.referral_source) return false;
+      if (state.hasEmail && !c.email) return false;
+      if (state.hasPhone && !(c.office_phone || c.home_phone)) return false;
+      if (createdFrom || createdTo || updatedFrom || updatedTo) {
+        const audit = AuditStamp.stampFor(c.id);
+        if (createdFrom && audit.createdTs < createdFrom) return false;
+        if (createdTo && audit.createdTs > createdTo + 86400000 - 1) return false;
+        if (updatedFrom && audit.updatedTs < updatedFrom) return false;
+        if (updatedTo && audit.updatedTs > updatedTo + 86400000 - 1) return false;
+      }
       if (!q) return true;
       const hay = `${c.first_name} ${c.last_name} ${c.organization} ${c.email}`.toLowerCase();
       return hay.includes(q);
@@ -77,12 +109,39 @@
       </tr>`;
     }).join('');
 
+    const fcount = activeFilterCount();
+    const allContacts = window.CONTACTS || [];
+    const orgs = [...new Set(allContacts.map((c) => c.organization).filter(Boolean))].sort();
+    const states = [...new Set(allContacts.map((c) => c.state).filter(Boolean))].sort();
+
     document.getElementById('contactsPageBody').innerHTML = `
       <div class="contacts-toolbar">
         <input type="search" id="contactsSearchInput" placeholder="Search contacts by name, organization, email…" value="${esc(state.search)}" />
         <div class="contacts-org-filter" id="contactsOrgFilter"></div>
+        <button class="filter-btn${fcount ? ' active' : ''}" type="button" id="contactsFilterBtn">
+          <img src="../../assets/icons/filter 1.svg" alt="" width="14" height="14" />
+          Filters
+          <span class="fcnt" id="contactsFilterCount" style="display:${fcount ? 'inline-flex' : 'none'}">${fcount}</span>
+        </button>
       </div>
-      ${rows.length ? `<div style="overflow-x:auto"><table class="contacts-tbl"><thead><tr>
+      <div class="filter-panel" id="contactsFilterPanel" style="display:${state.filterOpen ? 'flex' : 'none'}">
+        <span class="filter-label">Filter by</span>
+        <div class="filter-input" id="contactsOrgMultiSelect" style="width:200px"></div>
+        <div class="filter-input" id="contactsStateSelect" style="width:110px"></div>
+        <button type="button" class="chip${state.referralOnly ? ' on' : ''}" id="contactsReferralOnlyChip">Referral Source only</button>
+        <button type="button" class="chip${state.hasEmail ? ' on' : ''}" id="contactsHasEmailChip">Has email</button>
+        <button type="button" class="chip${state.hasPhone ? ' on' : ''}" id="contactsHasPhoneChip">Has phone</button>
+        <span class="filter-label" style="margin-left:6px">Created</span>
+        <input class="tb-input doc-age-date" id="contactsCreatedFrom" type="date" aria-label="Created on or after" value="${state.createdFrom}" />
+        <span class="doc-age-sep">–</span>
+        <input class="tb-input doc-age-date" id="contactsCreatedTo" type="date" aria-label="Created on or before" value="${state.createdTo}" />
+        <span class="filter-label" style="margin-left:6px">Updated</span>
+        <input class="tb-input doc-age-date" id="contactsUpdatedFrom" type="date" aria-label="Updated on or after" value="${state.updatedFrom}" />
+        <span class="doc-age-sep">–</span>
+        <input class="tb-input doc-age-date" id="contactsUpdatedTo" type="date" aria-label="Updated on or before" value="${state.updatedTo}" />
+        ${fcount ? `<button class="btn" type="button" id="contactsFilterResetBtn" style="margin-left:auto">Reset filters</button>` : ''}
+      </div>
+      ${rows.length ? `<div class="gridwrap" style="overflow-x:auto;border:1px solid var(--border-lt);border-radius:8px"><table class="contacts-tbl"><thead><tr>
           ${sortHeader('name', 'NAME')}
           ${sortHeader('organization', 'ORGANIZATION')}
           ${sortHeader('org_type', 'ORG TYPE')}
@@ -101,6 +160,30 @@
       onChange: (v) => { state.orgTypeFilter = v; render(); },
     });
     document.getElementById('contactsSearchInput').addEventListener('input', (e) => { state.search = e.target.value; render(); });
+    document.getElementById('contactsFilterBtn').addEventListener('click', () => { state.filterOpen = !state.filterOpen; render(); });
+    CustomSelect.mount(document.getElementById('contactsOrgMultiSelect'), {
+      multiple: true, options: orgs.map((o) => ({ label: o, value: o })), values: state.orgFilter,
+      placeholder: `Organization (${state.orgFilter.length})`, ariaLabel: 'Filter by organization',
+      onChangeMulti: (vs) => { state.orgFilter = vs; render(); },
+    });
+    CustomSelect.mount(document.getElementById('contactsStateSelect'), {
+      options: [{ label: 'All States', value: '' }].concat(states.map((s) => ({ label: s, value: s }))),
+      value: state.stateFilter, ariaLabel: 'Filter by state',
+      onChange: (v) => { state.stateFilter = v; render(); },
+    });
+    document.getElementById('contactsReferralOnlyChip').addEventListener('click', () => { state.referralOnly = !state.referralOnly; render(); });
+    document.getElementById('contactsHasEmailChip').addEventListener('click', () => { state.hasEmail = !state.hasEmail; render(); });
+    document.getElementById('contactsHasPhoneChip').addEventListener('click', () => { state.hasPhone = !state.hasPhone; render(); });
+    ['createdFrom', 'createdTo', 'updatedFrom', 'updatedTo'].forEach((key) => {
+      const el = document.getElementById('contacts' + key[0].toUpperCase() + key.slice(1));
+      el.addEventListener('change', (e) => { state[key] = e.target.value; render(); });
+    });
+    const resetBtn = document.getElementById('contactsFilterResetBtn');
+    if (resetBtn) resetBtn.addEventListener('click', () => {
+      state.orgFilter = []; state.stateFilter = ''; state.referralOnly = false; state.hasEmail = false; state.hasPhone = false;
+      state.createdFrom = ''; state.createdTo = ''; state.updatedFrom = ''; state.updatedTo = '';
+      render();
+    });
     document.querySelectorAll('[data-sort-col]').forEach((th) => th.addEventListener('click', () => {
       const col = th.dataset.sortCol;
       if (state.sortCol === col) state.sortAsc = !state.sortAsc;

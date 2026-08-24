@@ -704,7 +704,25 @@
   ];
   const ORG_TYPES = ['Doctor', 'Hospital', 'Ancillary Provider', 'Payer'];
 
-  const contactsModal = { open: false, mode: 'select', targetFieldKey: null, view: 'list', search: '', orgTypeFilter: '', editingId: null, formValues: {}, deleteId: null, sortCol: 'name', sortAsc: true };
+  const contactsModal = {
+    open: false, mode: 'select', targetFieldKey: null, view: 'list', search: '', orgTypeFilter: '', editingId: null, formValues: {}, deleteId: null, sortCol: 'name', sortAsc: true,
+    filterOpen: false, orgFilter: [], stateFilter: '', referralOnly: false, hasEmail: false, hasPhone: false,
+    createdFrom: '', createdTo: '', updatedFrom: '', updatedTo: '',
+  };
+
+  function contactsActiveFilterCount() {
+    let n = 0;
+    if (contactsModal.orgFilter.length) n++;
+    if (contactsModal.stateFilter) n++;
+    if (contactsModal.referralOnly) n++;
+    if (contactsModal.hasEmail) n++;
+    if (contactsModal.hasPhone) n++;
+    if (contactsModal.createdFrom || contactsModal.createdTo) n++;
+    if (contactsModal.updatedFrom || contactsModal.updatedTo) n++;
+    return n;
+  }
+
+  function contactsDayMs(dateStr) { return dateStr ? new Date(dateStr + 'T00:00:00').getTime() : null; }
 
   function prescriberDefaults() {
     const org = (k) => { const h = lookupProvider(k); return h ? h.value : ''; };
@@ -743,11 +761,28 @@
 
   function contactsFiltered() {
     const q = contactsModal.search.trim().toLowerCase();
+    const selectMode = contactsModal.mode === 'select';
+    const createdFrom = contactsDayMs(contactsModal.createdFrom), createdTo = contactsDayMs(contactsModal.createdTo);
+    const updatedFrom = contactsDayMs(contactsModal.updatedFrom), updatedTo = contactsDayMs(contactsModal.updatedTo);
     const list = (window.CONTACTS || []).filter((c) => {
       // This popup is the Referral Source lookup — only referral-source
       // contacts are relevant here, so non-referral contacts stay hidden.
-      if (contactsModal.mode === 'select' && !c.referral_source) return false;
+      if (selectMode && !c.referral_source) return false;
       if (contactsModal.orgTypeFilter && c.org_type !== contactsModal.orgTypeFilter) return false;
+      if (!selectMode) {
+        if (contactsModal.orgFilter.length && !contactsModal.orgFilter.includes(c.organization)) return false;
+        if (contactsModal.stateFilter && c.state !== contactsModal.stateFilter) return false;
+        if (contactsModal.referralOnly && !c.referral_source) return false;
+        if (contactsModal.hasEmail && !c.email) return false;
+        if (contactsModal.hasPhone && !(c.office_phone || c.home_phone)) return false;
+        if (createdFrom || createdTo || updatedFrom || updatedTo) {
+          const audit = AuditStamp.stampFor(c.id);
+          if (createdFrom && audit.createdTs < createdFrom) return false;
+          if (createdTo && audit.createdTs > createdTo + 86400000 - 1) return false;
+          if (updatedFrom && audit.updatedTs < updatedFrom) return false;
+          if (updatedTo && audit.updatedTs > updatedTo + 86400000 - 1) return false;
+        }
+      }
       if (!q) return true;
       const hay = `${c.first_name} ${c.last_name} ${c.organization} ${c.email}`.toLowerCase();
       return hay.includes(q);
@@ -793,13 +828,39 @@
         </td>
       </tr>`;
     }).join('');
+    const fcount = contactsActiveFilterCount();
+    const allContacts = window.CONTACTS || [];
+    const orgs = [...new Set(allContacts.map((c) => c.organization).filter(Boolean))].sort();
+    const states = [...new Set(allContacts.map((c) => c.state).filter(Boolean))].sort();
     return `
       <div class="contacts-toolbar">
         <input type="search" id="contactsSearchInput" placeholder="Search contacts by name, organization, email…" value="${escapeHtml(contactsModal.search)}" />
         <div class="contacts-org-filter" id="contactsOrgFilter"></div>
+        ${selectMode ? '' : `<button class="filter-btn${fcount ? ' active' : ''}" type="button" id="contactsFilterBtn">
+          <img src="assets/icons/filter 1.svg" alt="" width="14" height="14" />
+          Filters
+          <span class="fcnt" id="contactsFilterCount" style="display:${fcount ? 'inline-flex' : 'none'}">${fcount}</span>
+        </button>`}
         <button type="button" class="btn primary" id="contactsAddNewBtn">+ Add New</button>
       </div>
-      ${rows.length ? `<div style="overflow-x:auto"><table class="contacts-tbl"><thead><tr>
+      ${selectMode ? '' : `<div class="filter-panel" id="contactsFilterPanel" style="display:${contactsModal.filterOpen ? 'flex' : 'none'}">
+        <span class="filter-label">Filter by</span>
+        <div class="filter-input" id="contactsOrgMultiSelect" style="width:200px"></div>
+        <div class="filter-input" id="contactsStateSelect" style="width:110px"></div>
+        <button type="button" class="chip${contactsModal.referralOnly ? ' on' : ''}" id="contactsReferralOnlyChip">Referral Source only</button>
+        <button type="button" class="chip${contactsModal.hasEmail ? ' on' : ''}" id="contactsHasEmailChip">Has email</button>
+        <button type="button" class="chip${contactsModal.hasPhone ? ' on' : ''}" id="contactsHasPhoneChip">Has phone</button>
+        <span class="filter-label" style="margin-left:6px">Created</span>
+        <input class="tb-input doc-age-date" id="contactsCreatedFrom" type="date" aria-label="Created on or after" value="${contactsModal.createdFrom}" />
+        <span class="doc-age-sep">–</span>
+        <input class="tb-input doc-age-date" id="contactsCreatedTo" type="date" aria-label="Created on or before" value="${contactsModal.createdTo}" />
+        <span class="filter-label" style="margin-left:6px">Updated</span>
+        <input class="tb-input doc-age-date" id="contactsUpdatedFrom" type="date" aria-label="Updated on or after" value="${contactsModal.updatedFrom}" />
+        <span class="doc-age-sep">–</span>
+        <input class="tb-input doc-age-date" id="contactsUpdatedTo" type="date" aria-label="Updated on or before" value="${contactsModal.updatedTo}" />
+        ${fcount ? `<button class="btn" type="button" id="contactsFilterResetBtn" style="margin-left:auto">Reset filters</button>` : ''}
+      </div>`}
+      ${rows.length ? `<div class="gridwrap" style="overflow-x:auto;border:1px solid var(--border-lt);border-radius:8px"><table class="contacts-tbl"><thead><tr>
           ${contactsSortHeader('name', 'NAME')}
           ${contactsSortHeader('organization', 'ORGANIZATION')}
           ${contactsSortHeader('org_type', 'ORG TYPE')}
@@ -891,6 +952,36 @@
         value: contactsModal.orgTypeFilter, ariaLabel: 'Filter by org type',
         onChange: (v) => { contactsModal.orgTypeFilter = v; renderContactsModal(); },
       });
+      if (contactsModal.mode !== 'select') {
+        const allContacts = window.CONTACTS || [];
+        const orgs = [...new Set(allContacts.map((c) => c.organization).filter(Boolean))].sort();
+        const states = [...new Set(allContacts.map((c) => c.state).filter(Boolean))].sort();
+        document.getElementById('contactsFilterBtn').addEventListener('click', () => { contactsModal.filterOpen = !contactsModal.filterOpen; renderContactsModal(); });
+        CustomSelect.mount(document.getElementById('contactsOrgMultiSelect'), {
+          multiple: true, options: orgs.map((o) => ({ label: o, value: o })), values: contactsModal.orgFilter,
+          placeholder: `Organization (${contactsModal.orgFilter.length})`, ariaLabel: 'Filter by organization',
+          onChangeMulti: (vs) => { contactsModal.orgFilter = vs; renderContactsModal(); },
+        });
+        CustomSelect.mount(document.getElementById('contactsStateSelect'), {
+          options: [{ label: 'All States', value: '' }].concat(states.map((s) => ({ label: s, value: s }))),
+          value: contactsModal.stateFilter, ariaLabel: 'Filter by state',
+          onChange: (v) => { contactsModal.stateFilter = v; renderContactsModal(); },
+        });
+        document.getElementById('contactsReferralOnlyChip').addEventListener('click', () => { contactsModal.referralOnly = !contactsModal.referralOnly; renderContactsModal(); });
+        document.getElementById('contactsHasEmailChip').addEventListener('click', () => { contactsModal.hasEmail = !contactsModal.hasEmail; renderContactsModal(); });
+        document.getElementById('contactsHasPhoneChip').addEventListener('click', () => { contactsModal.hasPhone = !contactsModal.hasPhone; renderContactsModal(); });
+        ['createdFrom', 'createdTo', 'updatedFrom', 'updatedTo'].forEach((key) => {
+          const el = document.getElementById('contacts' + key[0].toUpperCase() + key.slice(1));
+          el.addEventListener('change', (e) => { contactsModal[key] = e.target.value; renderContactsModal(); });
+        });
+        const resetBtn = document.getElementById('contactsFilterResetBtn');
+        if (resetBtn) resetBtn.addEventListener('click', () => {
+          contactsModal.orgFilter = []; contactsModal.stateFilter = ''; contactsModal.referralOnly = false;
+          contactsModal.hasEmail = false; contactsModal.hasPhone = false;
+          contactsModal.createdFrom = ''; contactsModal.createdTo = ''; contactsModal.updatedFrom = ''; contactsModal.updatedTo = '';
+          renderContactsModal();
+        });
+      }
       document.querySelectorAll('tr[data-select-id]').forEach((tr) => {
         if (contactsModal.mode === 'select') tr.addEventListener('click', (e) => {
           if (e.target.closest('[data-edit-id]') || e.target.closest('[data-delete-id]')) return;

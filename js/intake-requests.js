@@ -238,7 +238,6 @@
       if (r.muted) tr.classList.add('muted');
       if (r.disabled) tr.classList.add('disabled-row');
       const actor = Shell.ACTORS[Shell.getActor()];
-      if (r.claimedBy) tr.classList.add('row-claimed');
       const claimIndicator = r.claimedBy
         ? `<span class="doc-claim-indicator" data-tooltip="Claimed by ${r.claimedBy.name === actor.name ? 'you' : escapeHtml(r.claimedBy.name)}">${ICON_CLAIM}<span class="doc-claim-dot"></span></span>`
         : '';

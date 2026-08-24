@@ -34,6 +34,8 @@ window.AuditStamp = (function () {
       createdOn: fmt(createdTs),
       updatedOn: fmt(updatedTs),
       updatedBy: NAMES[h % NAMES.length],
+      createdTs: createdTs,
+      updatedTs: updatedTs,
     };
   }
 

@@ -138,8 +138,14 @@ button:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(5, 144, 84, 0.1
 /* Claimed-document indicator — a small icon + red dot inline with the
    document name in the Document Intake queue, with the claimant's name
    surfaced on hover via the shared [data-tip] tooltip pattern. Replaces the
-   former dedicated "Claimed By" column. */
-.doc-claim-indicator { position: relative; display: inline-flex; flex: none; align-items: center; margin-left: 7px; color: var(--t4); vertical-align: middle; }
+   former dedicated "Claimed By" column. Chip background/border reuse the
+   same blue "info" tone as the Review In Progress status badge, so the
+   claimed-doc indicator visually ties back to that status. */
+.doc-claim-indicator {
+  position: relative; display: inline-flex; flex: none; align-items: center; justify-content: center;
+  margin-left: 7px; width: 20px; height: 20px; border-radius: 50%;
+  background: #eff8ff; border: 1px solid #b2ddff; color: #175cd3; vertical-align: middle;
+}
 
 /* Fixed-position tooltip (see initFixedTooltips in shell.js) — same look as
    the CSS-only [data-tip] tooltip, for elements clipped by an overflow:hidden
@@ -149,5 +155,3 @@ button:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(5, 144, 84, 0.1
   padding: 4px 8px; border-radius: 4px; white-space: nowrap; pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,.25);
 }
 .doc-claim-dot { position: absolute; top: -2px; right: -3px; width: 7px; height: 7px; border-radius: 50%; background: var(--err); border: 1.5px solid #fff; }
-tr.row-claimed { background: var(--teal-faint); }
-tr.row-claimed:hover { background: var(--teal-pale); }
