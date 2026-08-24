@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Document Intake — SmartDocs by EsperHealth</title>
+<title>Document Intake — SolPA by EsperHealth</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -53,26 +53,6 @@
       </div>
     </div>
     <div class="tb-sep"></div>
-    <div class="viewing-as-wrap" title="Demo control: switch which clerk identity you are acting as, to see claim/read-only states from both sides">
-      <span class="viewing-as-label">Acting as</span>
-      <div class="viewing-as-dropdown">
-        <button class="viewing-as-btn" id="actingAsBtn" type="button">
-          <span id="actingAsText">Khushi C.</span>
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
-        </button>
-        <div class="viewing-as-menu" id="actingAsMenu">
-          <div class="viewing-as-item active" data-actor="khushi">
-            <span data-ic="user"></span>
-            Khushi C.
-          </div>
-          <div class="viewing-as-item" data-actor="ralvarez">
-            <span data-ic="user"></span>
-            R. Alvarez
-          </div>
-        </div>
-      </div>
-    </div>
-    <div class="tb-sep"></div>
     <span class="syncpill"><span class="dotg"></span> CPR+ connected · synced 09:42</span>
     <div class="tb-sep"></div>
     <a class="tb-link" onclick="toast('Opening CPR+ in new window (simulated)')">CPR+ ↗</a>
@@ -84,7 +64,7 @@
   <div class="frame">
     <aside class="sidenav" id="sidenav">
       <div class="sn-logo">
-        <img src="assets/images/SmartDocs_logo.png" alt="SmartDocs" />
+        <span class="sn-wordmark"><span class="sol">Sol</span><span class="pa">PA</span></span>
       </div>
 <div class="grp">Workflows</div>
       <a class="nav-item" data-view="dashboard" href="modules/dashboard/dashboard.html">
@@ -103,6 +83,9 @@
 <div class="nav-sub-items" data-sub-items="care">
       <a class="nav-item" data-view="patients" href="modules/patients/patients.html">
         <span data-ic="user"></span><span class="t">Patients</span>
+      </a>
+      <a class="nav-item" data-view="contacts" href="modules/contacts/contacts.html">
+        <span data-ic="users"></span><span class="t">Contacts</span>
       </a>
       <a class="nav-item" data-view="medications" href="modules/stub/stub.html?title=Medications&group=Care%20Center&view=medications">
         <span data-ic="clip"></span><span class="t">Medications</span>
@@ -209,7 +192,7 @@
         <div class="avatar" id="snAvatar">KC</div>
         <div><div class="un" id="snName">Khushi C.</div><div class="ur" id="snRole">Clearance Specialist · khushichugh08@gmail.com</div></div>
       </div>
-      <div class="foot"><b>EsperHealth</b> SmartDocs</div>
+      <div class="foot"><b>EsperHealth</b> SolPA</div>
     </aside>
 
     <div class="main">

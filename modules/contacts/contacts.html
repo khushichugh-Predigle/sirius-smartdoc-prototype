@@ -3,14 +3,15 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Prior Authorization — SolPA by EsperHealth</title>
+<title>Contacts</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 <link rel="stylesheet" href="../../css/tokens.css" />
 <link rel="stylesheet" href="../../css/shell.css" />
 <link rel="stylesheet" href="../../css/v64-components.css" />
-<link rel="stylesheet" href="prior-authorization.css" />
+<link rel="stylesheet" href="../../css/custom-select.css" />
+<link rel="stylesheet" href="../../css/document-detail.css" />
 </head>
 <body>
 <div id="app">
@@ -196,37 +197,48 @@
 
     <div class="main">
       <div class="pagehead">
-        <h1>Prior Authorization</h1>
-        <span class="crumb">Cases in the Prior Auth stage</span>
+        <h1>Contacts</h1>
         <div class="spacer"></div>
-        <button class="btn" onclick="renderPriorAuth();toast('Refreshed')"><span data-ic="refresh"></span> Refresh</button>
+        <button class="btn primary" id="contactsAddNewBtn" type="button"><span data-ic="plus"></span> Add New</button>
       </div>
-      <div class="toolbar">
-        <input class="tb-input" id="paf_search" placeholder="Search case #, patient, drug…" style="width:230px" oninput="renderPriorAuth()">
-        <select class="tb-input" id="paf_payer" style="width:150px" onchange="renderPriorAuth()">
-          <option value="">All Payers</option>
-          <option>Aetna</option><option>BCBS IL</option><option>Cigna</option><option>Humana</option><option>Optum Rx (CMM)</option><option>UnitedHealthcare</option>
-        </select>
-        <select class="tb-input" id="paf_prio" style="width:120px" onchange="renderPriorAuth()">
-          <option value="">All Priority</option><option>STAT</option><option>URGENT</option><option>ROUTINE</option>
-        </select>
-        <select class="tb-input" id="paf_status" style="width:170px" onchange="renderPriorAuth()">
-          <option value="">All Statuses</option>
-        </select>
-        <a class="tb-clear" id="paf_clear" onclick="clearPriorAuthFilters()" style="display:none;font-size:11px;color:var(--teal);font-weight:600;cursor:pointer">Clear</a>
-        <div class="spacer"></div>
-        <span class="tb-meta" id="paMetaCnt"></span>
-      </div>
-      <div style="padding:0 18px 18px" id="priorAuthBody"></div>
+      <div id="contactsPageBody" style="padding:0 18px 18px;overflow:auto"></div>
     </div>
   </div>
 </div>
 
+<!-- Add/Edit contact modal -->
+<div class="reclassify-overlay" id="contactFormOverlay" style="display:none">
+  <div class="reclassify-modal wide" role="dialog" aria-modal="true">
+    <div class="reclassify-head">
+      <h3 id="contactFormTitle">Add New Contact</h3>
+      <button type="button" class="reclassify-close" id="contactFormCloseBtn" aria-label="Close">&times;</button>
+    </div>
+    <div class="reclassify-body" id="contactFormBody"></div>
+    <div class="reclassify-foot" id="contactFormFoot"></div>
+  </div>
+</div>
+
+<!-- Delete contact confirm -->
+<div class="reclassify-overlay" id="deleteContactOverlay" style="display:none">
+  <div class="reclassify-modal" role="dialog" aria-modal="true">
+    <div class="reclassify-head"><h3>Delete Contact</h3>
+      <button type="button" class="reclassify-close" id="deleteContactCloseBtn" aria-label="Close">&times;</button>
+    </div>
+    <div class="reclassify-body">
+      <p class="reject-lead">Delete <b id="deleteContactName"></b>? This cannot be undone.</p>
+    </div>
+    <div class="reclassify-foot">
+      <button class="btn" type="button" id="deleteContactCancelBtn">Cancel</button>
+      <button class="btn danger" type="button" id="deleteContactConfirmBtn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script src="../../js/custom-select.js"></script>
 <script src="../../js/icons.js"></script>
-<script src="../../js/v64-helpers.js"></script>
 <script src="../../js/shell.js"></script>
 <script src="../../js/audit.js"></script>
-<script src="../../data/prior-authorization-data.js"></script>
-<script src="prior-authorization.js"></script>
+<script src="../../data/contacts.js"></script>
+<script src="contacts.js"></script>
 </body>
 </html>

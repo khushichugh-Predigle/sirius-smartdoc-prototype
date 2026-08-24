@@ -2,51 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>SmartDocs by EsperHealth — Design Prototype</title>
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="css/tokens.css" />
-<style>
-  body { overflow: auto; }
-  .landing { max-width: 760px; margin: 0 auto; padding: 64px 24px; }
-  .landing img.logo { height: 26px; margin-bottom: 28px; }
-  .landing h1 { font-size: 20px; font-weight: 800; color: var(--t1); margin-bottom: 6px; }
-  .landing p.lead { color: var(--t3); font-size: 13px; margin-bottom: 32px; max-width: 560px; }
-  .cards { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  .card {
-    display: block; text-decoration: none; border: 1px solid var(--border-lt); border-radius: 10px;
-    background: var(--card); padding: 20px; box-shadow: var(--shadow-xs); transition: border-color .12s ease, box-shadow .12s ease;
-  }
-  .card:hover { border-color: var(--teal); box-shadow: var(--shadow-md); }
-  .card .kicker { font-size: 10px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--teal); margin-bottom: 8px; }
-  .card h2 { font-size: 14.5px; font-weight: 700; color: var(--t1); margin-bottom: 6px; }
-  .card p { font-size: 11.5px; color: var(--t3); line-height: 1.5; }
-  .note { margin-top: 32px; padding: 12px 14px; border-radius: 8px; background: var(--chrome); border: 1px solid var(--border-lt); font-size: 11px; color: var(--t3); line-height: 1.6; }
-  .note b { color: var(--t2); }
-</style>
+<meta http-equiv="refresh" content="0; url=modules/dashboard/dashboard.html" />
+<title>SolPA</title>
 </head>
 <body>
-  <div class="landing">
-    <img class="logo" src="assets/images/SmartDocs_logo.png" alt="SmartDocs" />
-    <h1>SmartDocs — Design Prototype</h1>
-    <p class="lead">A static, click-through visual prototype of two app-smartdoc screens (Document Intake list and Document Detail review). All data is fabricated and held in memory — nothing here reads or writes a real backend.</p>
-    <div class="cards">
-      <a class="card" href="intake-requests.html">
-        <div class="kicker">Screen A</div>
-        <h2>Document Intake</h2>
-        <p>Searchable, filterable table of incoming documents with status chips, an advanced filter panel, and pagination.</p>
-      </a>
-      <a class="card" href="document-detail.html">
-        <div class="kicker">Screen B</div>
-        <h2>Document Detail</h2>
-        <p>Section rail, extracted-field form with confidence badges and evidence, patient/provider match, and a document preview.</p>
-      </a>
-    </div>
-    <div class="note">
-      <b>About this prototype:</b> the app shell (top bar + sidebar) is an approximate reconstruction — app-smartdoc's real chrome comes from a private component library not included in the source repo, so this one is modeled on your sirius_clearance_specialist_v64 reference instead of a pixel copy. NPI/drug lookups, the patient match panel, and Attach-to-Case are all wired to dummy data for click-through review only.
-    </div>
-  </div>
+  <p>Redirecting to <a href="modules/dashboard/dashboard.html">the dashboard</a>…</p>
 </body>
 </html>

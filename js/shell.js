@@ -110,29 +110,9 @@
       syncRoleUI(getRole());
     }
 
-    const aBtn = document.getElementById('actingAsBtn');
-    const aMenu = document.getElementById('actingAsMenu');
-    if (aBtn && aMenu) {
-      aBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const isOpen = aMenu.classList.contains('open');
-        aBtn.classList.toggle('open', !isOpen);
-        aMenu.classList.toggle('open', !isOpen);
-      });
-      aMenu.querySelectorAll('.viewing-as-item[data-actor]').forEach((item) => {
-        item.addEventListener('click', () => setActor(item.dataset.actor));
-      });
-      document.addEventListener('click', () => {
-        aBtn.classList.remove('open');
-        aMenu.classList.remove('open');
-      });
-      const cur = getActor();
-      const txt = document.getElementById('actingAsText');
-      if (txt) txt.textContent = ACTORS[cur].name;
-      aMenu.querySelectorAll('.viewing-as-item[data-actor]').forEach((el) => {
-        el.classList.toggle('active', el.dataset.actor === cur);
-      });
-    }
+    // No visible "Acting as" control anymore — getActor()/setActor() still
+    // back the claim system (see ACTORS above) and remain available from the
+    // console for testing multi-actor claim states.
   }
 
   function syncRoleUI(r) {
