@@ -66,12 +66,18 @@
 
   function statusBadge(status) {
     const v = status.toLowerCase();
-    if (v.includes('review in progress')) return 'purp';
     if (v.includes('in review')) return 'info';
     if (v.includes('complete') || v.includes('reviewed')) return 'ok';
     if (v.includes('duplicate') || v.includes('ignored') || v.includes('error') || v.includes('rejected')) return 'err';
     if (v.includes('processing')) return 'gray';
     return 'warn';
+  }
+
+  // "Review In Progress" is an internal status name (claim system) — shown
+  // to the user simply as "In Review", same label as the unclaimed variant;
+  // the claim icon (see doc-claim-indicator) is what tells them apart now.
+  function statusDisplayText(status) {
+    return status.toLowerCase().includes('review in progress') ? 'In Review' : status;
   }
 
   function isMuted(status) {
@@ -81,7 +87,7 @@
 
   function mapRow(doc) {
     const eff = Claims.effective(doc);
-    const status = toTitleCase(eff.status);
+    const status = statusDisplayText(toTitleCase(eff.status));
     const type = doc.document_type || '-';
     return {
       raw: doc,

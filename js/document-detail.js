@@ -61,12 +61,18 @@
   }
   function statusTheme(status) {
     const v = status.toLowerCase();
-    if (v.includes('review in progress')) return 'purple';
-    if (v.includes('in review')) return 'blue';
+    if (v.includes('in review') || v.includes('review in progress')) return 'blue';
     if (v.includes('reviewed') || v.includes('complete')) return 'success';
     if (v.includes('rejected') || v.includes('duplicate')) return 'error';
     if (v.includes('processing')) return 'gray';
     return 'warning';
+  }
+
+  // "Review In Progress" is an internal status name (claim system) — shown
+  // to the user simply as "In Review", same label as the unclaimed variant;
+  // the claim button/icon is what tells them apart now.
+  function statusDisplayText(status) {
+    return status.toLowerCase().includes('review in progress') ? 'In Review' : status;
   }
 
   /* ---------- Claim state (Data Entry Clerk concurrent editing) ---------- */
@@ -190,7 +196,7 @@
   /* ---------- Summary band ---------- */
   function renderSummaryBand() {
     document.getElementById('docName').textContent = doc.file.original_file_name;
-    document.getElementById('statusBadge').textContent = state.status;
+    document.getElementById('statusBadge').textContent = statusDisplayText(state.status);
     document.getElementById('statusBadge').className = 'ui-badge status-badge theme-' + statusTheme(state.status);
     document.getElementById('receivedAt').textContent = new Date(doc.audit_data.create_ts).toLocaleString();
 
