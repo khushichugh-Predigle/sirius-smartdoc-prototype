@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dashboard — SmartDocs by EsperHealth</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="../../css/tokens.css" />
+<link rel="stylesheet" href="../../css/shell.css" />
+<link rel="stylesheet" href="../../css/v64-components.css" />
+<link rel="stylesheet" href="dashboard.css" />
+</head>
+<body>
+<div id="app">
+  <div class="topbar">
+    <div class="tb-gsearch">
+      <svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input placeholder="Search case #, patient, member ID…" />
+    </div>
+    <div class="spacer"></div>
+    <div class="viewing-as-wrap">
+      <span class="viewing-as-label">Viewing as</span>
+      <div class="viewing-as-dropdown">
+        <button class="viewing-as-btn" id="viewingAsBtn" type="button">
+          <span id="viewingAsText">Clearance Specialist</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="viewing-as-menu" id="viewingAsMenu">
+          <div class="viewing-as-item" data-role="clerk">
+            <span data-ic="user"></span>
+            Data Entry Clerk
+          </div>
+          <div class="viewing-as-item active" data-role="spec">
+            <span data-ic="clipcheck"></span>
+            Clearance Specialist
+          </div>
+          <div class="viewing-as-item" data-role="itadmin">
+            <span data-ic="gear"></span>
+            IT Admin
+          </div>
+          <div class="viewing-as-item" data-role="superadmin">
+            <span data-ic="shield"></span>
+            Super Admin
+          </div>
+          <div class="viewing-as-item" data-role="pam">
+            <span data-ic="eye"></span>
+            Patient Access Manager
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="tb-sep"></div>
+    <span class="syncpill"><span class="dotg"></span> CPR+ connected · synced 09:42</span>
+    <div class="tb-sep"></div>
+    <a class="tb-link" onclick="toast('Opening CPR+ in new window (simulated)')">CPR+ ↗</a>
+    <a class="tb-link" title="Notifications" onclick="toast('3 unread notifications')"><span data-ic="bell"></span> <span style="font-size:9px;background:#DC2626;color:#fff;border-radius:7px;padding:0 4px;font-weight:700">3</span></a>
+    <div class="tb-sep"></div>
+    <div class="tb-avatar">KC</div>
+  </div>
+
+  <div class="frame">
+    <aside class="sidenav" id="sidenav">
+      <div class="sn-logo">
+        <img src="../../assets/images/SmartDocs_logo.png" alt="SmartDocs" />
+      </div>
+      <div class="grp">Workflows</div>
+      <a class="nav-item" data-view="dashboard" href="../../modules/dashboard/dashboard.html">
+        <span data-ic="dash"></span><span class="t">Dashboard</span>
+      </a>
+      <a class="nav-item" data-view="intake" href="../../intake-requests.html">
+        <span data-ic="file"></span><span class="t">Document Intake</span>
+      </a>
+      <a class="nav-item" data-view="cases" href="../../modules/case-management/case-management.html">
+        <span data-ic="folder"></span><span class="t">Case Management</span>
+      </a>
+      <a class="nav-item" data-view="priorauth" href="../../modules/prior-authorization/prior-authorization.html">
+        <span data-ic="clipcheck"></span><span class="t">Prior Authorization</span>
+      </a>
+<div class="nav-sub-h" data-sub="care"><span data-ic="users"></span><span class="t">Care Center</span><span class="chev" data-ic="chevdn"></span></div>
+<div class="nav-sub-items" data-sub-items="care">
+      <a class="nav-item" data-view="patients" href="../../modules/patients/patients.html">
+        <span data-ic="user"></span><span class="t">Patients</span>
+      </a>
+      <a class="nav-item" data-view="medications" href="../../modules/stub/stub.html?title=Medications&group=Care%20Center&view=medications">
+        <span data-ic="clip"></span><span class="t">Medications</span>
+      </a>
+      <a class="nav-item" data-view="medicalinfo" href="../../modules/stub/stub.html?title=Medical%20Info&group=Care%20Center&view=medicalinfo">
+        <span data-ic="file-text"></span><span class="t">Medical Info</span>
+      </a>
+      <a class="nav-item" data-view="diagnosis" href="../../modules/stub/stub.html?title=Diagnosis&group=Care%20Center&view=diagnosis">
+        <span data-ic="clipcheck"></span><span class="t">Diagnosis</span>
+      </a>
+      <a class="nav-item" data-view="insurance" href="../../modules/stub/stub.html?title=Insurance&group=Care%20Center&view=insurance">
+        <span data-ic="shield"></span><span class="t">Insurance</span>
+      </a>
+      <a class="nav-item" data-view="providers" href="../../modules/stub/stub.html?title=Providers&group=Care%20Center&view=providers">
+        <span data-ic="users"></span><span class="t">Providers</span>
+      </a>
+</div>
+<div class="nav-sub-h" data-sub="pharmacy"><span data-ic="folder"></span><span class="t">Pharmacy Center</span><span class="chev" data-ic="chevdn"></span></div>
+<div class="nav-sub-items" data-sub-items="pharmacy">
+      <a class="nav-item" data-view="phcases" href="../../modules/stub/stub.html?title=Cases&group=Pharmacy%20Center&view=phcases">
+        <span data-ic="folder"></span><span class="t">Cases</span>
+      </a>
+      <a class="nav-item" data-view="prescriptions" href="../../modules/stub/stub.html?title=Prescriptions&group=Pharmacy%20Center&view=prescriptions">
+        <span data-ic="file-text"></span><span class="t">Prescriptions</span>
+      </a>
+      <a class="nav-item" data-view="drugs" href="../../modules/stub/stub.html?title=Drugs&group=Pharmacy%20Center&view=drugs">
+        <span data-ic="clip"></span><span class="t">Drugs</span>
+      </a>
+      <a class="nav-item" data-view="therapies" href="../../modules/stub/stub.html?title=Therapies&group=Pharmacy%20Center&view=therapies">
+        <span data-ic="zap"></span><span class="t">Therapies</span>
+      </a>
+      <a class="nav-item" data-view="pa" href="../../modules/stub/stub.html?title=PA%20Requests&group=Pharmacy%20Center&view=pa">
+        <span data-ic="clipcheck"></span><span class="t">PA Requests</span>
+      </a>
+      <a class="nav-item" data-view="appeals" href="../../modules/stub/stub.html?title=Appeals&group=Pharmacy%20Center&view=appeals">
+        <span data-ic="send"></span><span class="t">Appeals</span>
+      </a>
+</div>
+<div class="nav-sub-h" data-sub="payer"><span data-ic="bank"></span><span class="t">Payer Center</span><span class="chev" data-ic="chevdn"></span></div>
+<div class="nav-sub-items" data-sub-items="payer">
+      <a class="nav-item" data-view="payers" href="../../modules/stub/stub.html?title=Payers&group=Payer%20Center&view=payers">
+        <span data-ic="bank"></span><span class="t">Payers</span>
+      </a>
+      <a class="nav-item" data-view="clearinghouses" href="../../modules/stub/stub.html?title=Clearing%20Houses&group=Payer%20Center&view=clearinghouses">
+        <span data-ic="link"></span><span class="t">Clearing Houses</span>
+      </a>
+</div>
+<div class="nav-sub-h" data-sub="doc"><span data-ic="file"></span><span class="t">Document Center</span><span class="chev" data-ic="chevdn"></span></div>
+<div class="nav-sub-items" data-sub-items="doc">
+      <a class="nav-item" data-view="documents" href="../../modules/stub/stub.html?title=Documents&group=Document%20Center&view=documents">
+        <span data-ic="file"></span><span class="t">Documents</span>
+      </a>
+      <a class="nav-item" data-view="forms" href="../../modules/forms/forms.html">
+        <span data-ic="file-text"></span><span class="t">Forms</span>
+      </a>
+</div>
+<div class="nav-sub-h" data-sub="policy"><span data-ic="bank"></span><span class="t">Policy Center</span><span class="chev" data-ic="chevdn"></span></div>
+<div class="nav-sub-items" data-sub-items="policy">
+      <a class="nav-item" data-view="policies" href="../../modules/stub/stub.html?title=Policies&group=Policy%20Center&view=policies">
+        <span data-ic="file-text"></span><span class="t">Policies</span>
+      </a>
+      <a class="nav-item" data-view="policyrules" href="../../modules/stub/stub.html?title=Policy%20Rules&group=Policy%20Center&view=policyrules">
+        <span data-ic="clipcheck"></span><span class="t">Policy Rules</span>
+      </a>
+</div>
+<div class="nav-sub-h" data-sub="agentlogs"><span data-ic="dots"></span><span class="t">Agent Logs</span><span class="chev" data-ic="chevdn"></span></div>
+<div class="nav-sub-items" data-sub-items="agentlogs">
+      <a class="nav-item" data-view="precog" href="../../modules/stub/stub.html?title=Precog&group=Agent%20Logs&view=precog">
+        <span data-ic="eye"></span><span class="t">Precog</span>
+      </a>
+      <a class="nav-item" data-view="fabrix" href="../../modules/stub/stub.html?title=Fabrix&group=Agent%20Logs&view=fabrix">
+        <span data-ic="settings"></span><span class="t">Fabrix</span>
+      </a>
+      <a class="nav-item" data-view="agents" href="../../modules/stub/stub.html?title=Agents&group=Agent%20Logs&view=agents">
+        <span data-ic="zap"></span><span class="t">Agents</span>
+      </a>
+</div>
+<div class="nav-sub-h" data-sub="config"><span data-ic="gear"></span><span class="t">Configurations</span><span class="chev" data-ic="chevdn"></span></div>
+<div class="nav-sub-items" data-sub-items="config">
+      <a class="nav-item" data-view="chconfig" href="../../modules/stub/stub.html?title=Clearing%20House%20Config&group=Configurations&view=chconfig">
+        <span data-ic="link"></span><span class="t">Clearing House Config</span>
+      </a>
+      <a class="nav-item" data-view="payerconfig" href="../../modules/stub/stub.html?title=Payer%20Config&group=Configurations&view=payerconfig">
+        <span data-ic="bank"></span><span class="t">Payer Config</span>
+      </a>
+</div>
+<div class="nav-sub-h" data-sub="access"><span data-ic="shield"></span><span class="t">Access Control</span><span class="chev" data-ic="chevdn"></span></div>
+<div class="nav-sub-items" data-sub-items="access">
+      <a class="nav-item" data-view="users" href="../../modules/users/users.html">
+        <span data-ic="users"></span><span class="t">Users</span>
+      </a>
+      <a class="nav-item" data-view="roles" href="../../modules/roles/roles.html">
+        <span data-ic="user"></span><span class="t">Roles</span>
+      </a>
+      <a class="nav-item" data-view="permissions" href="../../modules/stub/stub.html?title=Permissions&group=Access%20Control&view=permissions">
+        <span data-ic="clipcheck"></span><span class="t">Permissions</span>
+      </a>
+      <a class="nav-item" data-view="positions" href="../../modules/stub/stub.html?title=Positions&group=Access%20Control&view=positions">
+        <span data-ic="folder"></span><span class="t">Positions</span>
+      </a>
+</div>
+      <div class="flexfill"></div>
+      <div class="sn-user" id="snUser">
+        <div class="avatar" id="snAvatar">KC</div>
+        <div><div class="un" id="snName">Khushi C.</div><div class="ur" id="snRole">Clearance Specialist · khushichugh08@gmail.com</div></div>
+      </div>
+      <div class="foot"><b>EsperHealth</b> SmartDocs</div>
+    </aside>
+
+    <div class="main">
+      <div class="pagehead">
+        <h1>Dashboard</h1>
+        <div class="spacer"></div>
+      </div>
+      <div id="dashBody"></div>
+    </div>
+  </div>
+</div>
+
+<script src="../../js/icons.js"></script>
+<script src="../../js/v64-helpers.js"></script>
+<script src="../../js/shell.js"></script>
+<script src="../../data/dashboard-data.js"></script>
+<script src="dashboard.js"></script>
+</body>
+</html>

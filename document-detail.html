@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Document Detail — SmartDocs by EsperHealth</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="css/v64-components.css" />
+<link rel="stylesheet" href="css/tokens.css" />
+<link rel="stylesheet" href="css/shell.css" />
+<link rel="stylesheet" href="css/custom-select.css" />
+<link rel="stylesheet" href="css/left-section.css" />
+<link rel="stylesheet" href="css/right-section.css" />
+<link rel="stylesheet" href="css/forms.css" />
+<link rel="stylesheet" href="css/document-detail.css" />
+</head>
+<body>
+<div id="app">
+  <div class="topbar">
+    <div class="tb-gsearch">
+      <svg class="ic" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+      <input placeholder="Search case #, patient, member ID…" />
+    </div>
+    <div class="spacer"></div>
+    <div class="viewing-as-wrap">
+      <span class="viewing-as-label">Viewing as</span>
+      <div class="viewing-as-dropdown">
+        <button class="viewing-as-btn" id="viewingAsBtn" type="button">
+          <span id="viewingAsText">Clearance Specialist</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="viewing-as-menu" id="viewingAsMenu">
+          <div class="viewing-as-item" data-role="clerk">
+            <span data-ic="user"></span>
+            Data Entry Clerk
+          </div>
+          <div class="viewing-as-item active" data-role="spec">
+            <span data-ic="clipcheck"></span>
+            Clearance Specialist
+          </div>
+          <div class="viewing-as-item" data-role="itadmin">
+            <span data-ic="gear"></span>
+            IT Admin
+          </div>
+          <div class="viewing-as-item" data-role="superadmin">
+            <span data-ic="shield"></span>
+            Super Admin
+          </div>
+          <div class="viewing-as-item" data-role="pam">
+            <span data-ic="eye"></span>
+            Patient Access Manager
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="tb-sep"></div>
+    <div class="viewing-as-wrap" title="Demo control: switch which clerk identity you are acting as, to see claim/read-only states from both sides">
+      <span class="viewing-as-label">Acting as</span>
+      <div class="viewing-as-dropdown">
+        <button class="viewing-as-btn" id="actingAsBtn" type="button">
+          <span id="actingAsText">Khushi C.</span>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+        </button>
+        <div class="viewing-as-menu" id="actingAsMenu">
+          <div class="viewing-as-item active" data-actor="khushi">
+            <span data-ic="user"></span>
+            Khushi C.
+          </div>
+          <div class="viewing-as-item" data-actor="ralvarez">
+            <span data-ic="user"></span>
+            R. Alvarez
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="tb-sep"></div>
+    <span class="syncpill"><span class="dotg"></span> CPR+ connected · synced 09:42</span>
+    <div class="tb-sep"></div>
+    <a class="tb-link" onclick="toast('Opening CPR+ in new window (simulated)')">CPR+ ↗</a>
+    <a class="tb-link" title="Notifications" onclick="toast('3 unread notifications')"><span data-ic="bell"></span> <span style="font-size:9px;background:#DC2626;color:#fff;border-radius:7px;padding:0 4px;font-weight:700">3</span></a>
+    <div class="tb-sep"></div>
+    <div class="tb-avatar">KC</div>
+  </div>
+
+  <div class="frame">
+    <aside class="sidenav" id="sidenav">
+      <div class="sn-logo">
+        <img src="assets/images/SmartDocs_logo.png" alt="SmartDocs" />
+      </div>
+<div class="grp">Workflows</div>
+      <a class="nav-item" data-view="dashboard" href="modules/dashboard/dashboard.html">
+        <span data-ic="dash"></span><span class="t">Dashboard</span>
+      </a>
+      <a class="nav-item" data-view="intake" href="intake-requests.html">
+        <span data-ic="file"></span><span class="t">Document Intake</span>
+      </a>
+      <a class="nav-item" data-view="cases" href="modules/case-management/case-management.html">
+        <span data-ic="folder"></span><span class="t">Case Management</span>
+      </a>
+      <a class="nav-item" data-view="priorauth" href="modules/prior-authorization/prior-authorization.html">
+        <span data-ic="clipcheck"></span><span class="t">Prior Authorization</span>
+      </a>
+<div class="nav-sub-h" data-sub="care"><span data-ic="users"></span><span class="t">Care Center</span><span class="chev" data-ic="chevdn"></span></div>
+<div class="nav-sub-items" data-sub-items="care">
+      <a class="nav-item" data-view="patients" href="modules/patients/patients.html">
+        <span data-ic="user"></span><span class="t">Patients</span>
+      </a>
+      <a class="nav-item" data-view="medications" href="modules/stub/stub.html?title=Medications&group=Care%20Center&view=medications">
+        <span data-ic="clip"></span><span class="t">Medications</span>
+      </a>
+      <a class="nav-item" data-view="medicalinfo" href="modules/stub/stub.html?title=Medical%20Info&group=Care%20Center&view=medicalinfo">
+        <span data-ic="file-text"></span><span class="t">Medical Info</span>
+      </a>
+      <a class="nav-item" data-view="diagnosis" href="modules/stub/stub.html?title=Diagnosis&group=Care%20Center&view=diagnosis">
+        <span data-ic="clipcheck"></span><span class="t">Diagnosis</span>
+      </a>
+      <a class="nav-item" data-view="insurance" href="modules/stub/stub.html?title=Insurance&group=Care%20Center&view=insurance">
+        <span data-ic="shield"></span><span class="t">Insurance</span>
+      </a>
+      <a class="nav-item" data-view="providers" href="modules/stub/stub.html?title=Providers&group=Care%20Center&view=providers">
+        <span data-ic="users"></span><span class="t">Providers</span>
+      </a>
+</div>
+<div class="nav-sub-h" data-sub="pharmacy"><span data-ic="folder"></span><span class="t">Pharmacy Center</span><span class="chev" data-ic="chevdn"></span></div>
+<div class="nav-sub-items" data-sub-items="pharmacy">
+      <a class="nav-item" data-view="phcases" href="modules/stub/stub.html?title=Cases&group=Pharmacy%20Center&view=phcases">
+        <span data-ic="folder"></span><span class="t">Cases</span>
+      </a>
+      <a class="nav-item" data-view="prescriptions" href="modules/stub/stub.html?title=Prescriptions&group=Pharmacy%20Center&view=prescriptions">
+        <span data-ic="file-text"></span><span class="t">Prescriptions</span>
+      </a>
+      <a class="nav-item" data-view="drugs" href="modules/stub/stub.html?title=Drugs&group=Pharmacy%20Center&view=drugs">
+        <span data-ic="clip"></span><span class="t">Drugs</span>
+      </a>
+      <a class="nav-item" data-view="therapies" href="modules/stub/stub.html?title=Therapies&group=Pharmacy%20Center&view=therapies">
+        <span data-ic="zap"></span><span class="t">Therapies</span>
+      </a>
+      <a class="nav-item" data-view="pa" href="modules/stub/stub.html?title=PA%20Requests&group=Pharmacy%20Center&view=pa">
+        <span data-ic="clipcheck"></span><span class="t">PA Requests</span>
+      </a>
+      <a class="nav-item" data-view="appeals" href="modules/stub/stub.html?title=Appeals&group=Pharmacy%20Center&view=appeals">
+        <span data-ic="send"></span><span class="t">Appeals</span>
+      </a>
+</div>
+<div class="nav-sub-h" data-sub="payer"><span data-ic="bank"></span><span class="t">Payer Center</span><span class="chev" data-ic="chevdn"></span></div>
+<div class="nav-sub-items" data-sub-items="payer">
+      <a class="nav-item" data-view="payers" href="modules/stub/stub.html?title=Payers&group=Payer%20Center&view=payers">
+        <span data-ic="bank"></span><span class="t">Payers</span>
+      </a>
+      <a class="nav-item" data-view="clearinghouses" href="modules/stub/stub.html?title=Clearing%20Houses&group=Payer%20Center&view=clearinghouses">
+        <span data-ic="link"></span><span class="t">Clearing Houses</span>
+      </a>
+</div>
+<div class="nav-sub-h" data-sub="doc"><span data-ic="file"></span><span class="t">Document Center</span><span class="chev" data-ic="chevdn"></span></div>
+<div class="nav-sub-items" data-sub-items="doc">
+      <a class="nav-item" data-view="documents" href="modules/stub/stub.html?title=Documents&group=Document%20Center&view=documents">
+        <span data-ic="file"></span><span class="t">Documents</span>
+      </a>
+      <a class="nav-item" data-view="forms" href="modules/forms/forms.html">
+        <span data-ic="file-text"></span><span class="t">Forms</span>
+      </a>
+</div>
+<div class="nav-sub-h" data-sub="policy"><span data-ic="bank"></span><span class="t">Policy Center</span><span class="chev" data-ic="chevdn"></span></div>
+<div class="nav-sub-items" data-sub-items="policy">
+      <a class="nav-item" data-view="policies" href="modules/stub/stub.html?title=Policies&group=Policy%20Center&view=policies">
+        <span data-ic="file-text"></span><span class="t">Policies</span>
+      </a>
+      <a class="nav-item" data-view="policyrules" href="modules/stub/stub.html?title=Policy%20Rules&group=Policy%20Center&view=policyrules">
+        <span data-ic="clipcheck"></span><span class="t">Policy Rules</span>
+      </a>
+</div>
+<div class="nav-sub-h" data-sub="agentlogs"><span data-ic="dots"></span><span class="t">Agent Logs</span><span class="chev" data-ic="chevdn"></span></div>
+<div class="nav-sub-items" data-sub-items="agentlogs">
+      <a class="nav-item" data-view="precog" href="modules/stub/stub.html?title=Precog&group=Agent%20Logs&view=precog">
+        <span data-ic="eye"></span><span class="t">Precog</span>
+      </a>
+      <a class="nav-item" data-view="fabrix" href="modules/stub/stub.html?title=Fabrix&group=Agent%20Logs&view=fabrix">
+        <span data-ic="settings"></span><span class="t">Fabrix</span>
+      </a>
+      <a class="nav-item" data-view="agents" href="modules/stub/stub.html?title=Agents&group=Agent%20Logs&view=agents">
+        <span data-ic="zap"></span><span class="t">Agents</span>
+      </a>
+</div>
+<div class="nav-sub-h" data-sub="config"><span data-ic="gear"></span><span class="t">Configurations</span><span class="chev" data-ic="chevdn"></span></div>
+<div class="nav-sub-items" data-sub-items="config">
+      <a class="nav-item" data-view="chconfig" href="modules/stub/stub.html?title=Clearing%20House%20Config&group=Configurations&view=chconfig">
+        <span data-ic="link"></span><span class="t">Clearing House Config</span>
+      </a>
+      <a class="nav-item" data-view="payerconfig" href="modules/stub/stub.html?title=Payer%20Config&group=Configurations&view=payerconfig">
+        <span data-ic="bank"></span><span class="t">Payer Config</span>
+      </a>
+</div>
+<div class="nav-sub-h" data-sub="access"><span data-ic="shield"></span><span class="t">Access Control</span><span class="chev" data-ic="chevdn"></span></div>
+<div class="nav-sub-items" data-sub-items="access">
+      <a class="nav-item" data-view="users" href="modules/users/users.html">
+        <span data-ic="users"></span><span class="t">Users</span>
+      </a>
+      <a class="nav-item" data-view="roles" href="modules/roles/roles.html">
+        <span data-ic="user"></span><span class="t">Roles</span>
+      </a>
+      <a class="nav-item" data-view="permissions" href="modules/stub/stub.html?title=Permissions&group=Access%20Control&view=permissions">
+        <span data-ic="clipcheck"></span><span class="t">Permissions</span>
+      </a>
+      <a class="nav-item" data-view="positions" href="modules/stub/stub.html?title=Positions&group=Access%20Control&view=positions">
+        <span data-ic="folder"></span><span class="t">Positions</span>
+      </a>
+</div>
+      <div class="flexfill"></div>
+      <div class="sn-user" id="snUser">
+        <div class="avatar" id="snAvatar">KC</div>
+        <div><div class="un" id="snName">Khushi C.</div><div class="ur" id="snRole">Clearance Specialist · khushichugh08@gmail.com</div></div>
+      </div>
+      <div class="foot"><b>EsperHealth</b> SmartDocs</div>
+    </aside>
+
+    <div class="main">
+      <section class="document-detail-page">
+        <header class="crumb-bar">
+          <button class="back-btn" id="crumbBackBtn" aria-label="Back to intake">
+            <img src="assets/icons/arrow-left-02-sharp.svg" width="20" height="20" alt="" />
+          </button>
+          <nav class="crumbs" aria-label="Breadcrumb">
+            <button type="button" id="backBtn">Document Intake</button>
+            <span>&rsaquo;</span>
+            <strong id="crumbDocName"></strong>
+          </nav>
+        </header>
+
+        <section class="summary-band">
+          <article class="summary-card document-card">
+            <div class="doc-main">
+              <div class="doc-head">
+                <h2 id="docName"></h2>
+                <span class="ui-badge status-badge" id="statusBadge"></span>
+              </div>
+              <div class="doc-row">
+                <div class="doc-type-select" id="docTypeSelect"></div>
+                <button type="button" class="btn" id="claimBtn" style="display:none"></button>
+              </div>
+            </div>
+            <div class="doc-side">
+              <div class="routine-select" id="prioritySelect"></div>
+              <div class="doc-meta"><span class="meta-item">Received On <strong id="receivedAt"></strong></span></div>
+            </div>
+          </article>
+
+          <article class="summary-card attach-card" id="attachCard"></article>
+        </section>
+
+        <div class="reclassify-banner" id="readOnlyBanner" style="display:none;margin:0 20px 10px"></div>
+
+        <main class="review-workspace">
+          <aside class="section-rail" id="sectionRail">
+            <div class="section-rail-inner">
+              <div class="sr-header-row"><h2>Sections</h2>
+                <button class="sr-collapse-btn" id="railCollapseBtn" aria-label="Toggle sidebar">
+                  <img src="assets/icons/sidebar-left.svg" width="16" height="16" alt="" />
+                </button>
+              </div>
+              <div id="sectionItems"></div>
+            </div>
+          </aside>
+
+          <div class="form-column">
+            <div class="match-region" id="matchRegion"></div>
+
+            <section class="form-panel">
+              <div class="form-head">
+                <h3 id="formSectionTitle"></h3>
+                <button type="button" class="add-drug-btn" id="addDrugBtn" style="display:none">+ Add Drug</button>
+                <span class="saved"><img src="assets/icons/cloud-download.svg" width="14" height="14" alt="" /> Saved</span>
+              </div>
+              <form class="dynamic-form" id="dynamicForm" onsubmit="return false"></form>
+            </section>
+
+            <div class="section-actions">
+              <button class="btn" type="button" id="cancelBtn">Cancel</button>
+              <span class="section-actions-spacer"></span>
+              <button class="btn primary" type="button" id="nextBtn">Next →</button>
+            </div>
+          </div>
+
+          <div class="preview-resizer" title="Drag to resize panels"></div>
+
+          <aside class="preview-panel-wrap">
+            <div class="preview-panel">
+              <div class="preview-bar"><strong id="previewDocName">Document preview</strong>
+                <button class="btn xs" type="button" onclick="toast('Opening in new tab (simulated)')">New tab</button>
+              </div>
+              <div class="preview-body">
+                <div class="pdf-toolbar">
+                  <button type="button" id="zoomOutBtn">−</button>
+                  <span class="pv-page-label" id="zoomLabel">100%</span>
+                  <button type="button" id="zoomInBtn">+</button>
+                  <span class="pv-sep"></span>
+                  <button type="button" id="rotateBtn">⟳ Rotate</button>
+                  <span class="pv-sep"></span>
+                  <span class="pv-page-label">Page 1 of 1</span>
+                </div>
+                <div class="pdf-canvas-wrap">
+                  <div class="pdf-page" id="pdfPage">
+                    <img src="assets/images/document-preview-placeholder.svg" alt="Document preview placeholder" />
+                    <div class="pdf-evidence-highlight" id="pdfHighlight" style="display:none"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </aside>
+        </main>
+
+        <footer class="action-bar">
+          <button class="btn danger" type="button" id="rejectOpenBtn">Reject</button>
+          <span></span>
+          <button class="btn primary submit-btn" type="button" id="saveSubmitBtn">Save &amp; submit</button>
+        </footer>
+
+        <!-- Reclassify (Update Document Type) modal -->
+        <div class="reclassify-overlay" id="reclassifyOverlay" style="display:none">
+          <div class="reclassify-modal" role="dialog" aria-modal="true">
+            <div class="reclassify-head"><h3>Update Document Type</h3>
+              <button type="button" class="reclassify-close" id="reclassifyCloseBtn" aria-label="Close">&times;</button>
+            </div>
+            <div class="reclassify-body">
+              <div class="reclassify-banner">Changing from <b id="reclassifyFrom"></b> → <b id="reclassifyTo"></b></div>
+              <div class="reclassify-field"><label>Reason <span class="req">*</span></label><div id="reclassifyReasonSelect"></div></div>
+              <div class="reclassify-field"><label>Notes <span class="req">*</span></label><textarea rows="3" placeholder="Describe why this document is being reclassified…"></textarea></div>
+            </div>
+            <div class="reclassify-foot">
+              <button class="btn" type="button" id="reclassifyCancelBtn">Cancel</button>
+              <button class="btn primary" type="button" id="reclassifyConfirmBtn">Save</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Reject modal -->
+        <div class="reclassify-overlay" id="rejectOverlay" style="display:none">
+          <div class="reclassify-modal" role="dialog" aria-modal="true">
+            <div class="reclassify-head"><h3>Reject</h3>
+              <button type="button" class="reclassify-close" id="rejectCloseBtn" aria-label="Close">&times;</button>
+            </div>
+            <div class="reclassify-body">
+              <p class="reject-lead"><b id="rejectDocName"></b> will be moved to the Rejected list. It stays in the system and can be reverted anytime.</p>
+              <div class="reclassify-field"><label>Reason <span class="req">*</span></label><div id="rejectReasonSelect"></div></div>
+              <div class="reclassify-field"><label>Note</label><textarea rows="3" placeholder="Optional note…"></textarea></div>
+            </div>
+            <div class="reclassify-foot">
+              <button class="btn" type="button" id="rejectCancelBtn">Cancel</button>
+              <button class="btn danger reject-confirm-btn" type="button" id="rejectConfirmBtn">Reject</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Claim-gate modal (shown when an unclaimed doc's fields are clicked) -->
+        <div class="reclassify-overlay" id="claimGateOverlay" style="display:none">
+          <div class="reclassify-modal" role="dialog" aria-modal="true">
+            <div class="reclassify-head"><h3>Claim Document</h3>
+              <button type="button" class="reclassify-close" id="claimGateCloseBtn" aria-label="Close">&times;</button>
+            </div>
+            <div class="reclassify-body">
+              <p class="reject-lead">This document is unclaimed. Claim it to start editing — it'll be assigned to you and locked to other clerks until you finish.</p>
+            </div>
+            <div class="reclassify-foot">
+              <button class="btn" type="button" id="claimGateCancelBtn">Cancel</button>
+              <button class="btn primary" type="button" id="claimGateConfirmBtn">Claim &amp; Edit</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Unclaim (Patient Access Manager) modal -->
+        <div class="reclassify-overlay" id="unclaimOverlay" style="display:none">
+          <div class="reclassify-modal" role="dialog" aria-modal="true">
+            <div class="reclassify-head"><h3>Unclaim Document</h3>
+              <button type="button" class="reclassify-close" id="unclaimCloseBtn" aria-label="Close">&times;</button>
+            </div>
+            <div class="reclassify-body">
+              <p class="reject-lead">This document is currently claimed by <b id="unclaimOwnerName"></b>. Unclaiming it will return the status to <b>Pending Review</b> and make it available for another Data Entry Clerk to claim.</p>
+            </div>
+            <div class="reclassify-foot">
+              <button class="btn" type="button" id="unclaimCancelBtn">Cancel</button>
+              <button class="btn danger" type="button" id="unclaimConfirmBtn">Unclaim</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Contacts Management / Referral Source lookup popup -->
+        <div class="reclassify-overlay" id="contactsOverlay" style="display:none">
+          <div class="reclassify-modal wide" role="dialog" aria-modal="true">
+            <div class="reclassify-head">
+              <div style="display:flex;align-items:center;gap:10px;min-width:0">
+                <button type="button" class="contacts-back-icon-btn" id="contactsBackIconBtn" aria-label="Back to list" style="display:none">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                </button>
+                <h3 id="contactsModalTitle">Referral Source</h3>
+              </div>
+              <button type="button" class="reclassify-close" id="contactsCloseBtn" aria-label="Close">&times;</button>
+            </div>
+            <div class="reclassify-body" id="contactsModalBody"></div>
+            <div class="reclassify-foot" id="contactsModalFoot" style="display:none"></div>
+          </div>
+        </div>
+
+        <!-- Delete contact confirm -->
+        <div class="reclassify-overlay" id="deleteContactOverlay" style="display:none">
+          <div class="reclassify-modal" role="dialog" aria-modal="true">
+            <div class="reclassify-head"><h3>Delete Contact</h3>
+              <button type="button" class="reclassify-close" id="deleteContactCloseBtn" aria-label="Close">&times;</button>
+            </div>
+            <div class="reclassify-body">
+              <p class="reject-lead">Delete <b id="deleteContactName"></b>? This cannot be undone.</p>
+            </div>
+            <div class="reclassify-foot">
+              <button class="btn" type="button" id="deleteContactCancelBtn">Cancel</button>
+              <button class="btn danger" type="button" id="deleteContactConfirmBtn">Delete</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Attach-to-case side panel -->
+        <div class="side-panel-overlay" id="sidePanelOverlay" style="display:none">
+          <div class="side-panel" role="dialog" aria-modal="true">
+            <div class="sp-header">
+              <div class="sp-title-row"><strong>Attach to Case</strong><span class="ui-badge theme-gray sp-count-badge" id="spCount"></span></div>
+              <button type="button" class="sp-close" id="sidePanelCloseBtn" aria-label="Close">&times;</button>
+            </div>
+            <div class="sp-body" id="sidePanelBody"></div>
+            <div class="sp-foot">
+              <button class="btn" type="button" id="sidePanelStartNewBtn">Start new case</button>
+              <div class="sp-foot-right">
+                <button class="btn" type="button" id="sidePanelCancelBtn">Cancel</button>
+                <button class="btn primary" type="button" id="sidePanelAttachBtn" disabled>Attach</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script src="js/custom-select.js"></script>
+<script src="js/icons.js"></script>
+<script src="js/shell.js"></script>
+<script src="js/claims.js"></script>
+<script src="js/audit.js"></script>
+<script src="data/dummy-documents.js"></script>
+<script src="data/intake-form-schema.js"></script>
+<script src="data/contacts.js"></script>
+<script src="js/document-detail.js"></script>
+</body>
+</html>

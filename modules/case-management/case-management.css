@@ -1,0 +1,12 @@
+/* Case Management (list) module — module-specific rules only. Pagehead/toolbar/filter-panel/
+ * filter-btn/tb-input/grid/gridwrap/pager/chip/bdg/prio/sla/spin/mono/sub all come from
+ * css/v64-components.css (see module-port-conventions.md) — this file only adds what that
+ * stylesheet doesn't already cover for this screen. */
+
+/* v64's #casesGrid lives inside a `.split` flex row with a resizable bottom detail drawer;
+ * this module drops that drawer (row click navigates to case-detail.html instead — see
+ * case-management.js header comment), so the grid/pager just stack directly in `.main`. */
+#casesWrap {
+  flex: 1;
+  min-height: 0;
+}

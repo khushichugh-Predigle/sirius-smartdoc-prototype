@@ -1,0 +1,12 @@
+/* Generic "not yet built" placeholder — ported from v64's renderStub(), reused for
+   every nav item that v64 itself never built out (Medications, Diagnosis, Payers,
+   Documents, Precog, Permissions, etc.). Content is populated by stub.js from the
+   ?title=&group= query params. */
+.main { background: var(--bg); overflow-y: auto; }
+.pagehead { height: 52px; flex: none; display: flex; align-items: center; gap: 10px; padding: 0 20px; background: var(--card); border-bottom: 1px solid var(--border-lt); }
+.pagehead h1 { font-size: 15px; font-weight: 700; color: var(--t1); }
+.stub-card { max-width: 540px; margin: 32px auto; text-align: center; padding: 40px 30px; }
+.stub-icon { width: 46px; height: 46px; border-radius: 12px; background: var(--teal-faint); display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; color: var(--teal); }
+.stub-title { font-size: 16px; font-weight: 700; color: var(--t1); }
+.stub-crumb { font-size: 11px; color: var(--t4); margin-top: 2px; letter-spacing: 0.04em; text-transform: uppercase; }
+.stub-copy { font-size: 12.5px; color: var(--t3); margin: 14px 0 0; line-height: 1.5; }

@@ -1,0 +1,4 @@
+/* Dashboard-specific overrides. Everything renderSpecDash() needs — .kpis/.kpi,
+ * .panel/.p-t, .dash-cols, table.mini, .caseid, .bdg.*, .accbar, .mono — already
+ * ships in css/v64-components.css (ported from v64's own stylesheet), so there's
+ * nothing genuinely dashboard-specific left to add here. */

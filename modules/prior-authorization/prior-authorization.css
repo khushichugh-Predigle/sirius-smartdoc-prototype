@@ -1,0 +1,4 @@
+/* Prior Authorization module — no module-specific overrides needed.
+   Everything this screen uses (.pagehead, .toolbar, .tb-input, .panel,
+   .p-t, table.mini, .caseid, .prio, .bdg) already ships in
+   ../../css/v64-components.css, ported wholesale from v64's own stylesheet. */

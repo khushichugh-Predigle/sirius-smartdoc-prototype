@@ -1,0 +1,13 @@
+/* Forms — module-specific rules only. Nearly everything this screen needs (.pagehead, .toolbar,
+ * .filter-btn/.filter-panel, .fb-cards/.fb-card/.fb-vchip, .gridwrap/table.grid, .pagebar/.pg,
+ * .menuwrap/.menu, .fb-kebab, .fb-body/.fb-zero, .fb-lang, .m-head/.m-body/.m-foot, .fb-row,
+ * .fb-split/.fb-splitmain/.fb-cfg, .fb-acc, .fb-optcards/.fb-mini, .fb-locs/.chip, .fb-perm,
+ * .ir-crumb/.ir-back-btn) already ships in css/v64-components.css — see that file's `.fb-*` block,
+ * ported wholesale from v64's own Forms module. This file only fills the one gap: v64 references
+ * a `.fb-seg` view-toggle wrapper class it never actually defines (relies on default block/inline
+ * flow), which renders fine but sits slightly loose in this shell's tighter toolbar. */
+
+.fb-seg {
+  display: inline-flex;
+  align-items: center;
+}

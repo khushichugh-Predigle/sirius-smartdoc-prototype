@@ -1,0 +1,43 @@
+<svg width="620" height="800" viewBox="0 0 620 800" xmlns="http://www.w3.org/2000/svg">
+  <rect width="620" height="800" fill="#ffffff"/>
+  <rect x="0" y="0" width="620" height="800" fill="none" stroke="#e4e7ec" stroke-width="1"/>
+  <text x="40" y="52" font-family="Helvetica, Arial, sans-serif" font-size="20" font-weight="700" fill="#182230">Patient Referral Form</text>
+  <text x="40" y="72" font-family="Helvetica, Arial, sans-serif" font-size="11" fill="#667084">No source PDF was supplied for this prototype — this is a placeholder page.</text>
+  <line x1="40" y1="86" x2="580" y2="86" stroke="#d0d5dd" stroke-width="1"/>
+
+  <g font-family="Helvetica, Arial, sans-serif" fill="#334053">
+    <text x="40" y="118" font-size="12" font-weight="700">Patient Information</text>
+    <text x="40" y="140" font-size="10.5" fill="#667084">Name ____________________________     DOB __________     Gender ______</text>
+    <text x="40" y="160" font-size="10.5" fill="#667084">Address _____________________________________________________________</text>
+    <text x="40" y="180" font-size="10.5" fill="#667084">City _______________  State ____  ZIP _______  Phone ________________</text>
+
+    <text x="40" y="216" font-size="12" font-weight="700">Insurance</text>
+    <text x="40" y="238" font-size="10.5" fill="#667084">Payer ______________________________  Plan ________________________</text>
+    <text x="40" y="258" font-size="10.5" fill="#667084">Subscriber ID ______________  Group # ______________</text>
+
+    <text x="40" y="294" font-size="12" font-weight="700">Prescriber</text>
+    <text x="40" y="316" font-size="10.5" fill="#667084">Name ____________________________  NPI __________________</text>
+    <text x="40" y="336" font-size="10.5" fill="#667084">Organization ________________________  Phone _______________</text>
+    <text x="40" y="356" font-size="10.5" fill="#667084">Fax ______________  Specialty _____________________</text>
+
+    <text x="40" y="392" font-size="12" font-weight="700">Therapy / Drug Order</text>
+    <text x="40" y="414" font-size="10.5" fill="#667084">Drug ____________________  Strength _______  Route _______</text>
+    <text x="40" y="434" font-size="10.5" fill="#667084">Frequency __________________  Duration _______________</text>
+
+    <text x="40" y="470" font-size="12" font-weight="700">Clinical / History</text>
+  </g>
+
+  <g stroke="#eaecf0" stroke-width="1">
+    <line x1="40" y1="494" x2="580" y2="494"/>
+    <line x1="40" y1="514" x2="580" y2="514"/>
+    <line x1="40" y1="534" x2="580" y2="534"/>
+    <line x1="40" y1="554" x2="580" y2="554"/>
+    <line x1="40" y1="574" x2="580" y2="574"/>
+    <line x1="40" y1="594" x2="580" y2="594"/>
+    <line x1="40" y1="614" x2="580" y2="614"/>
+    <line x1="40" y1="634" x2="450" y2="634"/>
+  </g>
+
+  <text x="40" y="700" font-family="Helvetica, Arial, sans-serif" font-size="9.5" fill="#98a2b3">Signature ____________________________________     Date ______________</text>
+  <text x="310" y="770" font-family="Helvetica, Arial, sans-serif" font-size="9" fill="#c4ccd3" text-anchor="middle">Page 1 of 1 — placeholder</text>
+</svg>

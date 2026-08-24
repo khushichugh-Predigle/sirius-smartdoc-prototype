@@ -1,0 +1,150 @@
+/* Case Detail — module-specific rules only. Most classes (.dt-tabs/.dt-tab,
+   .ov-split/.ov-stack/.ov-side/.ov-acc/.ov-stat-card, .fset/.fgrid/.fld,
+   .bdg/.confb/.prio/.sla/.pip/.bp, .vsplit/.vrail/.vmain/.vfields/.vact,
+   .pa-tbl, .callout, .m-head/.m-body/.m-foot) already live in
+   css/v64-components.css — see the conventions doc. This file only adapts
+   `.detail` from v64's bottom-drawer sizing to a full-page layout, and adds
+   the handful of things this screen needs that v64-components.css doesn't
+   define (crumb bar, empty state, assessment cards, doc preview panel). */
+
+.cd-main { min-height: 0; }
+
+/* Breadcrumb — not in v64-components.css (v64 doesn't have a full-page case
+   detail crumb bar), values matched to the live app's .crumb/.crumb-line/etc. */
+.crumb { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 18px; background: #fff; border-bottom: 1px solid rgba(0,0,0,0); flex: none; }
+.back-btn { flex: none; width: 24px; height: 24px; border: none; border-radius: 50%; background: transparent; color: var(--t3); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.back-btn:hover { background: var(--chrome); color: var(--t1); }
+.crumb-line { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.crumb-link { border: none; background: transparent; color: var(--t2); font-weight: 500; font-size: 12px; cursor: pointer; padding: 0; text-decoration: none; }
+.crumb-link:hover { color: var(--t1); }
+.crumb-sep { color: var(--t4); }
+.crumb-id { font-size: 13px; font-weight: 600; color: var(--t1); }
+
+/* Full-page layout: .main is a flex column (crumb, banner, tabs, body) —
+   v64's `.detail`/`.casebanner{display:none}` (bottom-drawer defaults) don't
+   apply here since this is a dedicated page, not an in-page drawer. */
+.dt-tabs { border-bottom: 1px solid var(--border-lt); }
+.casebanner { display: flex !important; }
+
+.cd-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 80px 24px;
+}
+.cd-empty .t { font-size: 14px; font-weight: 700; color: var(--t1); margin-top: 14px; }
+.cd-empty .m { font-size: 11.5px; color: var(--t3); margin-top: 6px; max-width: 380px; }
+
+/* Assessment (PA) tab */
+.pa-picker { display: flex; align-items: center; gap: 8px; padding: 10px 14px 0; }
+.pa-picker select { height: 30px; border: 1px solid var(--border); border-radius: 7px; font-size: 11.5px; padding: 0 8px; min-width: 260px; background: #fff; }
+.aud-meta { display: flex; flex-wrap: wrap; gap: 16px; padding: 10px 14px; font-size: 11px; color: var(--t3); }
+.aud-meta b { color: var(--t2); }
+.aud-block { display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px; border-radius: 9px; margin-bottom: 8px; }
+.aud-block.err { background: var(--err-bg); border: 1px solid #F3B4B4; }
+.aud-block.warn { background: var(--warn-bg); border: 1px solid #FCD34D; }
+.aud-block .ic16 { flex: none; margin-top: 1px; }
+.aud-block.err .ic16 { color: var(--err); }
+.aud-block.warn .ic16 { color: var(--warn); }
+.aud-block .t { font-size: 11.5px; font-weight: 700; color: var(--t1); }
+.aud-block .b { font-size: 11px; color: var(--t2); margin-top: 3px; line-height: 1.5; }
+.req-row { display: flex; align-items: flex-start; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--border-lt); }
+.req-row:last-child { border-bottom: none; }
+.req-row .id { flex: none; width: 26px; font-size: 10px; font-weight: 700; color: var(--t4); padding-top: 2px; }
+.req-row .txt { flex: 1; font-size: 11.5px; color: var(--t2); }
+.assess-card { background: var(--chrome); border: 1px solid var(--border-lt); border-radius: 9px; padding: 12px 14px; margin-top: 4px; }
+.assess-card .rating { font-size: 12px; font-weight: 700; color: var(--t1); }
+.assess-card .txt { font-size: 11.5px; color: var(--t3); margin-top: 4px; line-height: 1.55; }
+
+/* Submission tab — document preview stand-in */
+.cd-preview { flex: 1; min-width: 260px; border-left: 1px solid var(--border-lt); background: var(--chrome); display: flex; flex-direction: column; min-height: 0; }
+.cd-preview-h { flex: none; padding: 8px 12px; font-size: 10.5px; font-weight: 700; color: var(--t3); letter-spacing: .04em; border-bottom: 1px solid var(--border-lt); background: #fff; }
+.cd-preview-body { flex: 1; overflow: auto; padding: 14px; display: flex; justify-content: center; }
+.cd-preview-body img { max-width: 100%; border: 1px solid var(--border); border-radius: 6px; box-shadow: var(--shadow-xs); }
+
+/* Documents tab table */
+.cd-doc-tbl { width: 100%; border-collapse: collapse; font-size: 11.5px; }
+.cd-doc-tbl th { text-align: left; font-size: 10px; font-weight: 700; color: var(--t4); letter-spacing: .04em; padding: 6px 10px; border-bottom: 1px solid var(--border-lt); }
+.cd-doc-tbl td { padding: 8px 10px; border-bottom: 1px solid var(--border-lt); vertical-align: middle; }
+.cd-doc-tbl tr:last-child td { border-bottom: none; }
+.cd-doc-toolbar { display: flex; align-items: center; gap: 8px; padding: 0 0 10px; }
+.cd-doc-toolbar .search-wrap { position: relative; flex: 1; max-width: 320px; }
+.cd-doc-toolbar input[type="search"] { width: 100%; height: 30px; border: 1px solid var(--border); border-radius: 6px; padding: 0 10px 0 28px; font-size: 12px; }
+.cd-doc-toolbar .search-wrap svg { position: absolute; left: 8px; top: 8px; color: var(--t4); width: 14px; height: 14px; }
+.cd-doc-tbl .sel { width: 30px; }
+
+/* ===== Real-app reference layout (extracted from the live soleo-dev app-smartpa
+   case detail screen, https://soleo-dev.esperhealth.ai/case/case-management/...) —
+   .casebanner, .cb-*, .dt-tabs, .dt-tab, .ov-split, .ov-main, .ov-sidebar, .ov-stat-card,
+   .ov-acc (and children), .fgrid, .fld, .pa-tbl, .bdg already ship in css/v64-components.css with
+   matching values (confirmed against the live app's computed styles); this block
+   only overrides what differs (3-col cb-cols, not v64's 4-col) and adds classes
+   v64 doesn't have (.dt-sidebar-toggle, .tab-count, .ov-showall, .pa-add-btn,
+   the whole Assessment/Clinical-Review tab vocabulary). */
+
+.cb-cols { grid-template-columns: 1fr 1.15fr 1fr; }
+.cb-cols.hidden { display: none; }
+@media (max-width: 1200px) { .cb-cols { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 900px) { .cb-cols { grid-template-columns: 1fr; } .cb-col { border-right: none !important; } }
+.cb-top { cursor: pointer; user-select: none; }
+.cb-top .cb-collapse { margin-left: auto; display: flex; align-items: center; color: var(--t4); transition: transform .15s; }
+.cb-top .cb-collapse.collapsed { transform: rotate(180deg); }
+.cb-pill .pn { width: 6px; height: 6px; border-radius: 50%; background: var(--t4); flex: none; }
+.cb-pill .pn[data-tone="success"] { background: var(--teal); }
+.crumb-refresh-btn { margin-left: auto; display: inline-flex; align-items: center; gap: 5px; height: 26px; padding: 0 10px; border: 1px solid var(--border); border-radius: 6px; background: #fff; color: var(--t2); font-size: 11.5px; font-weight: 500; cursor: pointer; box-shadow: var(--shadow-xs); }
+.crumb-refresh-btn:hover { background: var(--chrome); }
+
+.dt-sidebar-toggle { flex: none; width: 30px; height: 26px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--border-lt); border-radius: 5px; background: #fff; color: var(--t3); cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,.08); margin-left: auto; }
+.dt-sidebar-toggle:hover { background: var(--chrome); color: var(--t1); }
+.dt-sidebar-toggle svg { transition: transform .15s; }
+.dt-sidebar-toggle.active svg { transform: rotate(180deg); }
+.tab-count { margin-left: 2px; font-size: 10px; font-weight: 600; color: var(--t4); }
+
+.ov-showall { padding: 6px 12px; text-align: center; }
+.ov-showall a { font-size: 11px; font-weight: 600; color: var(--teal); cursor: pointer; text-decoration: none; }
+.pa-add-btn { display: inline-flex; align-items: center; gap: 5px; height: 24px; padding: 0 10px; border: none; border-radius: 6px; background: var(--teal); color: #fff; font-size: 11px; font-weight: 600; cursor: pointer; }
+.pa-add-btn:hover { background: var(--teal-dark); }
+.pa-row-actions { display: flex; }
+.pa-tbl input.pa-seq { width: 100%; border: none; background: transparent; font-size: 11.5px; color: var(--t2); text-align: center; }
+
+/* ---- Clinical Review / Assessment tab (real app: "Dual Policy" audit) ---- */
+.assessment-tab { display: flex; flex-direction: column; min-height: 0; flex: 1; }
+.assessment-toolbar { display: flex; align-items: center; gap: 10px; padding: 6px 14px 2px; flex: none; }
+.pa-picker-label { font-size: 10.5px; font-weight: 800; color: var(--t3); letter-spacing: .06em; text-transform: uppercase; }
+.assessment-content { flex: 1; min-height: 0; overflow: auto; }
+.assessment-scroll { padding: 4px 16px 76px; max-width: 1100px; }
+.assessment-title-card { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 9px 14px; margin: 0 0 8px; background: #fff; border: 1px solid var(--border-lt); border-radius: 8px; box-shadow: var(--shadow-xs); }
+.assessment-title-card h2 { font-size: 16px; font-weight: 800; color: var(--t1); }
+.assessment-title-card .refreshed { font-size: 11px; color: var(--t4); flex: none; }
+
+.panel { background: #fff; border: 1px solid var(--border-lt); border-radius: 8px; margin: 0 0 8px; box-shadow: var(--shadow-xs); overflow: hidden; }
+.panel-head { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 11px; font-size: 10.5px; font-weight: 800; color: var(--t1); letter-spacing: .06em; text-transform: uppercase; background: var(--chrome); border: none; border-bottom: 1px solid var(--border-lt); cursor: pointer; text-align: left; }
+.panel-head .policy-link { color: var(--teal); text-decoration: none; }
+.accordion-chev { flex: none; display: flex; align-items: center; color: var(--t4); transition: transform .15s; }
+.panel-head[aria-expanded="false"] .accordion-chev { transform: rotate(-90deg); }
+
+.summary-body { padding: 14px 14px 12px; }
+.summary-block { margin: 0 0 12px; }
+.summary-label { font-size: 10.5px; font-weight: 800; color: var(--t3); letter-spacing: .06em; text-transform: uppercase; margin: 0 0 6px; }
+.summary-policy-block { margin: 10px 0 0; }
+.summary-policy-heading { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 800; color: var(--t1); }
+.summary-policy-name { font-size: 11px; font-weight: 700; color: var(--t3); margin-top: 2px; }
+.result-chip { display: inline-flex; align-items: center; font-size: 10px; font-weight: 800; letter-spacing: .02em; padding: 0 8px; height: 18px; border-radius: 999px; }
+.result-chip.compact { height: 16px; }
+.result-chip.chip-not-met { color: #dc2626; background: #fee2e2; border: 1px solid #fecaca; }
+.result-chip.chip-met { color: var(--ok-tx); background: var(--ok-bg); border: 1px solid #abefc6; }
+.result-chip.chip-partial { color: var(--warn-tx); background: var(--warn-bg); border: 1px solid #fedf89; }
+.summary-gap-list { margin: 8px 0 0; padding: 0 0 0 18px; }
+.summary-gap-list li { font-size: 12px; color: var(--t1); line-height: 1.45; margin: 3px 0; }
+.need-required { font-size: 10px; font-weight: 900; letter-spacing: .03em; text-transform: uppercase; color: #dc2626; padding: 0 8px; }
+.summary-in-place { font-size: 12px; color: var(--t3); line-height: 1.45; margin: 5px 0 0; }
+
+.readiness-card { padding: 8px 11px 10px; }
+.readiness-head-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 8px; }
+.readiness-head { font-size: 10.5px; font-weight: 800; color: var(--t3); letter-spacing: .06em; text-transform: uppercase; }
+.readiness-card p { font-size: 12px; color: var(--t2); line-height: 1.5; }
+
+.assessment-actions { display: flex; align-items: center; justify-content: flex-end; gap: 16px; padding: 9px 16px; background: rgba(255,255,255,.96); border-top: 1px solid var(--border-lt); flex: none; }
+.complete-btn, .regenerate-btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; height: 34px; min-width: 150px; padding: 0 16px; border-radius: 6px; font-size: 13px; font-weight: 800; cursor: pointer; }
+.complete-btn { border: none; background: var(--teal); color: #fff; }
+.complete-btn:hover { background: var(--teal-dark); }
+.regenerate-btn { border: 1px solid var(--border); background: #fff; color: var(--t2); }
+.regenerate-btn:hover { background: var(--chrome); }

@@ -1,0 +1,89 @@
+/* Ported from custom-select.component.scss (shared/components/custom-select) */
+.search-select { position: relative; width: 100%; display: inline-block; }
+.search-select-control { position: relative; width: 100%; }
+.search-select-trigger {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 31px;
+  padding: 0 30px 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #ffffff;
+  color: var(--t1);
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: text;
+}
+.search-select-trigger::placeholder { color: #667085; opacity: 1; }
+.search-select-trigger:disabled {
+  background: #f9fafb; border-color: var(--border-lt); color: var(--t4);
+  -webkit-text-fill-color: var(--t4); cursor: not-allowed;
+}
+.select-chevron-button {
+  position: absolute; top: 0; right: 0;
+  display: flex; align-items: center; justify-content: center;
+  width: 30px; height: 31px; border: 0; background: transparent; cursor: pointer;
+}
+.select-chevron-button:disabled { cursor: not-allowed; }
+.search-select.open .search-select-trigger:not(:disabled),
+.search-select-trigger:focus:not(:disabled) {
+  border-color: var(--teal); box-shadow: var(--ring);
+}
+.select-chevron {
+  width: 7px; height: 7px;
+  border-right: 1.5px solid #667085; border-bottom: 1.5px solid #667085;
+  transform: rotate(45deg) translateY(-2px); flex: none;
+}
+.search-select.open .select-chevron { transform: rotate(225deg) translateY(-1px); }
+.search-select-menu {
+  position: fixed; z-index: 1000;
+  max-height: 224px; overflow: auto;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: #ffffff; box-shadow: 0 8px 20px rgba(16, 24, 40, 0.14);
+}
+.search-select-option {
+  display: block; width: 100%; min-height: 24px; padding: 6px 10px;
+  border: 0; background: #ffffff; color: var(--t2);
+  font: inherit; font-size: 12px; text-align: left; cursor: pointer;
+}
+.search-select-option.multiple { display: flex; align-items: center; gap: 8px; }
+.option-checkbox {
+  position: relative; flex: none; width: 14px; height: 14px;
+  border: 1.5px solid var(--border); border-radius: 4px; background: #ffffff;
+}
+.option-checkbox.checked { border-color: var(--teal); background: var(--teal); }
+.option-checkbox.checked::after {
+  content: ""; position: absolute; top: 1px; left: 4px; width: 4px; height: 7px;
+  border-right: 1.5px solid #fff; border-bottom: 1.5px solid #fff; transform: rotate(45deg);
+}
+.search-select-option:hover:not(:disabled), .search-select-option.selected {
+  background: #ecfdf3; color: #05603a;
+}
+.search-select-option:disabled { color: var(--t4); cursor: not-allowed; }
+.search-select-empty { padding: 9px 10px; color: #667085; font-size: 12px; }
+
+/* Two-column option — for dropdowns where each entry carries two pieces of
+   info (e.g. a contact's name plus their organization): primary bold on the
+   left, secondary muted text right-aligned. Reusable wherever a dropdown's
+   options need more than a single flat label. */
+.search-select-option.two-col { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.ss-opt-primary { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; color: var(--t1); }
+.ss-opt-secondary { flex: none; color: var(--t4); font-size: 11px; }
+
+/* Secondary-button-styled option — for actions pinned atop a menu's option
+   list (e.g. "+ Add new referral source"), visually set apart from the
+   regular selectable rows below it. */
+.search-select-option.search-select-option-action {
+  margin: 4px; width: calc(100% - 8px);
+  border: 1px solid var(--border); border-radius: 6px;
+  background: #ffffff; color: var(--t2); font-weight: 600;
+}
+.search-select-option.search-select-option-action:hover:not(:disabled) {
+  background: var(--chrome); color: var(--t1);
+}

@@ -1,0 +1,55 @@
+/* Ported from esp-intake/components/right-section/right-section.component.scss.
+   ngx-extended-pdf-viewer is replaced with a lightweight static placeholder
+   (see assets/images/document-preview-placeholder.svg) plus a page/zoom/
+   rotate toolbar that mimics the real viewer's chrome. */
+.preview-panel-wrap {
+  display: flex; width: 34%; min-width: 340px; max-width: 60%; min-height: 0;
+  border-left: 1px solid var(--border); background: #fff; flex: none; position: relative;
+}
+.preview-panel { display: flex; width: 100%; min-height: 0; flex-direction: column; }
+.preview-bar {
+  display: flex; align-items: center; gap: 8px; height: 34px; border-bottom: 1px solid var(--border-lt);
+  padding: 0 11px; color: var(--t3); font-size: 11px; flex: none;
+}
+.preview-bar strong { min-width: 0; flex: 1; overflow: hidden; color: var(--t1); font-size: 11.5px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+
+.preview-body { position: relative; flex: 1; min-height: 0; overflow: hidden; background: #525b66; display: flex; flex-direction: column; }
+.pdf-toolbar {
+  flex: none; display: flex; align-items: center; justify-content: center; gap: 4px;
+  padding: 6px 10px; background: #3b4249; border-bottom: 1px solid #2b3136;
+}
+.pdf-toolbar button {
+  height: 24px; min-width: 24px; padding: 0 6px; border: none; border-radius: 4px;
+  background: transparent; color: #e5e7eb; font-size: 11px; cursor: pointer;
+}
+.pdf-toolbar button:hover { background: rgba(255,255,255,0.12); }
+.pdf-toolbar span.pv-page-label { color: #e5e7eb; font-size: 11px; padding: 0 4px; white-space: nowrap; }
+.pdf-toolbar .pv-sep { width: 1px; height: 16px; background: rgba(255,255,255,0.18); margin: 0 4px; }
+
+.pdf-canvas-wrap { flex: 1 1 auto; min-height: 0; overflow: auto; display: flex; align-items: flex-start; justify-content: center; padding: 18px; }
+.pdf-page {
+  position: relative; background: #fff; box-shadow: 0 4px 18px rgba(0,0,0,0.35);
+  transform-origin: top center; transition: transform 0.15s ease;
+}
+.pdf-page img { display: block; width: 620px; height: auto; }
+.pdf-evidence-highlight {
+  position: absolute; border: 2px solid #f59e0b; background: rgba(245, 158, 11, 0.22);
+  border-radius: 2px; pointer-events: none; transition: opacity 0.15s ease;
+}
+
+.preview-state {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  flex-direction: column; gap: 5px; padding: 24px; color: #fff; text-align: center;
+}
+.preview-state strong { font-size: 13px; }
+.preview-state span { max-width: 280px; color: #e5e7eb; font-size: 11.5px; }
+
+.preview-resizer {
+  position: relative; z-index: 11; width: 5px; flex: none; background: var(--border-lt); cursor: ew-resize;
+}
+.preview-resizer::after {
+  content: ""; position: absolute; left: 50%; top: 50%; width: 3px; height: 48px; border-radius: 2px;
+  background: #c4ccd3; transform: translate(-50%, -50%);
+}
+.preview-resizer:hover, .preview-resizer.drag { background: var(--teal-faint); }
+.preview-resizer:hover::after, .preview-resizer.drag::after { background: var(--teal); }

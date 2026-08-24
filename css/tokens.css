@@ -1,0 +1,153 @@
+/* Shared design tokens — lifted from app-smartdoc's own component styles
+   (dynamic-table.component.scss, document-detail.component.scss) and kept
+   consistent with the sirius_clearance_specialist_v64.html reference shell,
+   which uses the same Esper brand ramp. */
+:root {
+  --teal: #059054;
+  --teal-dark: #0a7145;
+  --teal-light: #0add81;
+  --teal-pale: #d7ffee;
+  --teal-faint: #eefff6;
+  --green: #01b969;
+
+  --bg: #f2f4f8;
+  --card: #ffffff;
+  --border: #d0d5dd;
+  --border-lt: #e9ecf1;
+  --row-line: #f2f4f8;
+  --t1: #101828;
+  --t2: #334053;
+  --t3: #667084;
+  --t4: #98a2b3;
+  --ink: #0b101a;
+  --ink2: #182230;
+
+  --ok: #059054;
+  --ok-bg: #d7ffee;
+  --ok-tx: #0b5c3b;
+  --warn: #d97706;
+  --warn-bg: #fef3c7;
+  --warn-tx: #92400e;
+  --err: #dc2626;
+  --err-bg: #fee2e2;
+  --err-tx: #991b1b;
+  --chrome: #f9fafb;
+
+  --shadow-xs: 0 1px 2px rgba(16, 24, 40, 0.05);
+  --shadow-sm: 0 1px 3px rgba(16, 24, 40, 0.08), 0 1px 2px rgba(16, 24, 40, 0.04);
+  --shadow-md: 0 4px 12px rgba(16, 24, 40, 0.08);
+  --ring: 0 0 0 3px rgba(5, 144, 84, 0.12);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  font-family: "Inter", system-ui, sans-serif;
+  font-size: 12px;
+  color: var(--t1);
+  background: var(--bg);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+button { font-family: inherit; cursor: pointer; }
+input, select, textarea { font-family: inherit; }
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--teal) !important;
+  box-shadow: var(--ring);
+}
+button:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(5, 144, 84, 0.18); }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: #c4ccd3; border-radius: 5px; border: 2px solid #fff; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* Generic small building blocks reused across both screens */
+.btn {
+  height: 30px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #ffffff;
+  color: var(--t2);
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: var(--shadow-xs);
+}
+.btn:hover { background: var(--chrome); color: var(--t1); }
+.btn:disabled { cursor: not-allowed; opacity: 0.72; }
+.btn.primary { border-color: var(--teal); background: var(--teal); color: #fff; }
+.btn.primary:hover { border-color: var(--teal-dark); background: var(--teal-dark); }
+.btn.primary:disabled { border-color: var(--border); background: var(--border-lt); color: var(--t4); }
+.btn.danger { border-color: #f3b4b4; color: var(--err); }
+.btn.danger:hover { background: #fef5f5; }
+.btn.danger:disabled { border-color: var(--border-lt); background: var(--chrome); color: var(--t4); opacity: 1; }
+.btn.outline-primary { border-color: var(--teal); background: #fff; color: var(--teal); }
+.btn.outline-primary:hover { background: var(--teal-faint); }
+.btn.xs { height: 26px; font-size: 11px; padding: 0 9px; }
+
+.ui-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  height: 22px;
+  padding: 0 10px;
+  border: 1px solid transparent;
+  border-radius: 9999px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.ui-badge .dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: #17b26a; }
+.ui-badge.theme-gray { color: #334053; background: #f9fafb; border-color: #e9ecf1; }
+.ui-badge.theme-blue { color: #175cd3; background: #eff8ff; border-color: #b2ddff; }
+.ui-badge.theme-success { color: #067647; background: #ecfdf3; border-color: #abefc6; }
+.ui-badge.theme-error { color: #b42318; background: #fef3f2; border-color: #fecdca; }
+.ui-badge.theme-warning { color: #b54708; background: #fffaeb; border-color: #fedf89; }
+.ui-badge.theme-orange { color: #b93815; background: #fef6ee; border-color: #f9dbaf; }
+
+/* Toast (dummy save/submit/reject feedback) */
+.toast-stack {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 4000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.toast {
+  min-width: 220px;
+  max-width: 340px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: #101828;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  box-shadow: var(--shadow-md);
+  animation: toast-in 0.18s ease;
+}
+@keyframes toast-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* Claimed-document indicator — a small icon + red dot inline with the
+   document name in the Document Intake queue, with the claimant's name
+   surfaced on hover via the shared [data-tip] tooltip pattern. Replaces the
+   former dedicated "Claimed By" column. */
+.doc-claim-indicator { position: relative; display: inline-flex; flex: none; align-items: center; margin-left: 7px; color: var(--t4); vertical-align: middle; }
+
+/* Fixed-position tooltip (see initFixedTooltips in shell.js) — same look as
+   the CSS-only [data-tip] tooltip, for elements clipped by an overflow:hidden
+   ancestor where the pseudo-element approach can't escape the clip. */
+.fixed-tooltip {
+  position: fixed; z-index: 1200; background: var(--ink2); color: #fff; font-size: 10px; font-weight: 600;
+  padding: 4px 8px; border-radius: 4px; white-space: nowrap; pointer-events: none; box-shadow: 0 4px 12px rgba(0,0,0,.25);
+}
+.doc-claim-dot { position: absolute; top: -2px; right: -3px; width: 7px; height: 7px; border-radius: 50%; background: var(--err); border: 1.5px solid #fff; }
+tr.row-claimed { background: var(--teal-faint); }
+tr.row-claimed:hover { background: var(--teal-pale); }

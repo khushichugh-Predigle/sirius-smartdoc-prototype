@@ -1,0 +1,5 @@
+/* Form Detail — module-specific rules only. Everything this screen needs (.ir-crumb/.ir-back-btn,
+ * .fb-split/.fb-splitmain/.fb-cfg, .fb-acc, .fb-optcards/.fb-mini, .fb-locs/.chip, .fb-perm,
+ * .gridwrap/table.grid, .pagebar/.pg, .menuwrap/.menu, .fb-kebab, .fb-body/.fb-zero, .fb-row,
+ * .m-head/.m-body/.m-foot) already ships in css/v64-components.css — see that file's `.fb-*` block.
+ * Nothing here is specific enough to this screen to need its own rule. */
