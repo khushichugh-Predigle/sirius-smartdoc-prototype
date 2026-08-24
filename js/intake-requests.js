@@ -66,7 +66,7 @@
 
   function statusBadge(status) {
     const v = status.toLowerCase();
-    if (v.includes('review in progress')) return 'info';
+    if (v.includes('review in progress')) return 'purp';
     if (v.includes('in review')) return 'info';
     if (v.includes('complete') || v.includes('reviewed')) return 'ok';
     if (v.includes('duplicate') || v.includes('ignored') || v.includes('error') || v.includes('rejected')) return 'err';

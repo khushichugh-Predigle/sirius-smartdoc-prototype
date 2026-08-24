@@ -110,6 +110,7 @@ button:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(5, 144, 84, 0.1
 .ui-badge.theme-error { color: #b42318; background: #fef3f2; border-color: #fecdca; }
 .ui-badge.theme-warning { color: #b54708; background: #fffaeb; border-color: #fedf89; }
 .ui-badge.theme-orange { color: #b93815; background: #fef6ee; border-color: #f9dbaf; }
+.ui-badge.theme-purple { color: #5b21b6; background: #ede9fe; border-color: #ddd6fe; }
 
 /* Toast (dummy save/submit/reject feedback) */
 .toast-stack {
@@ -138,13 +139,13 @@ button:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(5, 144, 84, 0.1
 /* Claimed-document indicator — a small icon + red dot inline with the
    document name in the Document Intake queue, with the claimant's name
    surfaced on hover via the shared [data-tip] tooltip pattern. Replaces the
-   former dedicated "Claimed By" column. Chip background/border reuse the
-   same blue "info" tone as the Review In Progress status badge, so the
-   claimed-doc indicator visually ties back to that status. */
+   former dedicated "Claimed By" column. Chip reuses the app's existing
+   error/restricted red tones (--err-bg/--err-tx, the same pair used by
+   .bdg.err and every other "restricted" callout) — locked = restricted. */
 .doc-claim-indicator {
   position: relative; display: inline-flex; flex: none; align-items: center; justify-content: center;
   margin-left: 7px; width: 20px; height: 20px; border-radius: 50%;
-  background: #eff8ff; border: 1px solid #b2ddff; color: #175cd3; vertical-align: middle;
+  background: var(--err-bg); border: 1px solid #f3b4b4; color: var(--err-tx); vertical-align: middle;
 }
 
 /* Fixed-position tooltip (see initFixedTooltips in shell.js) — same look as

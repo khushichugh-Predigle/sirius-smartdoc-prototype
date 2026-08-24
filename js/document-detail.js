@@ -61,7 +61,7 @@
   }
   function statusTheme(status) {
     const v = status.toLowerCase();
-    if (v.includes('review in progress')) return 'blue';
+    if (v.includes('review in progress')) return 'purple';
     if (v.includes('in review')) return 'blue';
     if (v.includes('reviewed') || v.includes('complete')) return 'success';
     if (v.includes('rejected') || v.includes('duplicate')) return 'error';
@@ -808,7 +808,6 @@
     const selectMode = contactsModal.mode === 'select';
     const rowsHtml = rows.map((c) => {
       const audit = AuditStamp.stampFor(c.id);
-      const deleteDisabled = c.referral_source;
       return `
       <tr class="${selectMode ? 'selectable' : ''}" data-select-id="${c.id}">
         <td>${escapeHtml(c.first_name)} ${escapeHtml(c.last_name)}${c.title ? `<br><span style="color:var(--t4);font-size:10.5px">${escapeHtml(c.title)}</span>` : ''}</td>
@@ -823,7 +822,7 @@
         <td>
           <div class="contact-row-actions">
             <button type="button" data-edit-id="${c.id}" title="Edit contact" aria-label="Edit contact">${ICON_EDIT}</button>
-            <button type="button" class="danger" data-delete-id="${c.id}" title="${deleteDisabled ? 'Referral source contacts can’t be deleted' : 'Delete contact'}" aria-label="Delete contact" ${deleteDisabled ? 'disabled' : ''}>${ICON_DELETE}</button>
+            <button type="button" class="danger" data-delete-id="${c.id}" title="Deleting contacts is disabled" aria-label="Delete contact" disabled>${ICON_DELETE}</button>
           </div>
         </td>
       </tr>`;
@@ -840,7 +839,8 @@
           <img src="assets/icons/filter 1.svg" alt="" width="14" height="14" />
           Filters
           <span class="fcnt" id="contactsFilterCount" style="display:${fcount ? 'inline-flex' : 'none'}">${fcount}</span>
-        </button>`}
+        </button>
+        <button class="btn" type="button" id="contactsFilterResetBtn">Reset</button>`}
         <button type="button" class="btn primary" id="contactsAddNewBtn">+ Add New</button>
       </div>
       ${selectMode ? '' : `<div class="filter-panel" id="contactsFilterPanel" style="display:${contactsModal.filterOpen ? 'flex' : 'none'}">
@@ -851,14 +851,17 @@
         <button type="button" class="chip${contactsModal.hasEmail ? ' on' : ''}" id="contactsHasEmailChip">Has email</button>
         <button type="button" class="chip${contactsModal.hasPhone ? ' on' : ''}" id="contactsHasPhoneChip">Has phone</button>
         <span class="filter-label" style="margin-left:6px">Created</span>
-        <input class="tb-input doc-age-date" id="contactsCreatedFrom" type="date" aria-label="Created on or after" value="${contactsModal.createdFrom}" />
-        <span class="doc-age-sep">–</span>
-        <input class="tb-input doc-age-date" id="contactsCreatedTo" type="date" aria-label="Created on or before" value="${contactsModal.createdTo}" />
+        <div class="date-range-field">
+          <input class="doc-age-date" id="contactsCreatedFrom" type="date" aria-label="Created on or after" value="${contactsModal.createdFrom}" />
+          <span class="doc-age-sep">–</span>
+          <input class="doc-age-date" id="contactsCreatedTo" type="date" aria-label="Created on or before" value="${contactsModal.createdTo}" />
+        </div>
         <span class="filter-label" style="margin-left:6px">Updated</span>
-        <input class="tb-input doc-age-date" id="contactsUpdatedFrom" type="date" aria-label="Updated on or after" value="${contactsModal.updatedFrom}" />
-        <span class="doc-age-sep">–</span>
-        <input class="tb-input doc-age-date" id="contactsUpdatedTo" type="date" aria-label="Updated on or before" value="${contactsModal.updatedTo}" />
-        ${fcount ? `<button class="btn" type="button" id="contactsFilterResetBtn" style="margin-left:auto">Reset filters</button>` : ''}
+        <div class="date-range-field">
+          <input class="doc-age-date" id="contactsUpdatedFrom" type="date" aria-label="Updated on or after" value="${contactsModal.updatedFrom}" />
+          <span class="doc-age-sep">–</span>
+          <input class="doc-age-date" id="contactsUpdatedTo" type="date" aria-label="Updated on or before" value="${contactsModal.updatedTo}" />
+        </div>
       </div>`}
       ${rows.length ? `<div class="gridwrap" style="overflow-x:auto;border:1px solid var(--border-lt);border-radius:8px"><table class="contacts-tbl"><thead><tr>
           ${contactsSortHeader('name', 'NAME')}

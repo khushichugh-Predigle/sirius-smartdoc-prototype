@@ -42,7 +42,11 @@
 }
 .search-select.open .select-chevron { transform: rotate(225deg) translateY(-1px); }
 .search-select-menu {
-  position: fixed; z-index: 1000;
+  /* Must beat .reclassify-overlay (3000) so dropdowns opened from inside a
+     modal (e.g. Org Type in the Add/Edit Contact form) render above the
+     modal's own backdrop/box instead of invisibly behind it — stays below
+     the toast stack (4000) so a toast can still cover it if both show. */
+  position: fixed; z-index: 3500;
   max-height: 224px; overflow: auto;
   border: 1px solid var(--border); border-radius: 6px;
   background: #ffffff; box-shadow: 0 8px 20px rgba(16, 24, 40, 0.14);

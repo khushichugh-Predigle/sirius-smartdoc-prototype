@@ -73,6 +73,18 @@ input.tb-input { width: 170px; }
 input.tb-input.doc-age-date { width: 140px; color: var(--t2); }
 .doc-age-sep { color: var(--t4); font-size: 11px; }
 
+/* A from/to date pair rendered as one bordered field (single control),
+   rather than two separately-bordered inputs with a dash between them. */
+.date-range-field {
+  display: inline-flex; align-items: center; height: 26px; border: 1px solid var(--border);
+  border-radius: 6px; background: #fff; box-shadow: var(--shadow-xs);
+}
+.date-range-field .doc-age-date {
+  border: none; box-shadow: none; background: transparent; height: 24px; width: 112px;
+  padding: 0 6px; font-size: 11.5px; color: var(--t2);
+}
+.date-range-field .doc-age-sep { padding: 0 2px; }
+
 .gridwrap { flex: 1; min-height: 80px; overflow: auto; background: #fff; position: relative; }
 table.grid { width: 100%; border-collapse: collapse; font-size: 11.5px; }
 table.grid thead th {

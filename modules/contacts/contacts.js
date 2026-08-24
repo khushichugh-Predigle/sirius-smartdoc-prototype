@@ -89,7 +89,6 @@
     const rows = filtered();
     const rowsHtml = rows.map((c) => {
       const audit = AuditStamp.stampFor(c.id);
-      const deleteDisabled = c.referral_source;
       return `
       <tr>
         <td>${esc(c.first_name)} ${esc(c.last_name)}${c.title ? `<br><span style="color:var(--t4);font-size:10.5px">${esc(c.title)}</span>` : ''}</td>
@@ -103,7 +102,7 @@
         <td>
           <div class="contact-row-actions">
             <button type="button" data-edit-id="${c.id}" title="Edit contact" aria-label="Edit contact">${ICON_EDIT}</button>
-            <button type="button" class="danger" data-delete-id="${c.id}" title="${deleteDisabled ? 'Referral source contacts can’t be deleted' : 'Delete contact'}" aria-label="Delete contact" ${deleteDisabled ? 'disabled' : ''}>${ICON_DELETE}</button>
+            <button type="button" class="danger" data-delete-id="${c.id}" title="Deleting contacts is disabled" aria-label="Delete contact" disabled>${ICON_DELETE}</button>
           </div>
         </td>
       </tr>`;
@@ -123,6 +122,7 @@
           Filters
           <span class="fcnt" id="contactsFilterCount" style="display:${fcount ? 'inline-flex' : 'none'}">${fcount}</span>
         </button>
+        <button class="btn" type="button" id="contactsFilterResetBtn">Reset</button>
       </div>
       <div class="filter-panel" id="contactsFilterPanel" style="display:${state.filterOpen ? 'flex' : 'none'}">
         <span class="filter-label">Filter by</span>
@@ -132,14 +132,17 @@
         <button type="button" class="chip${state.hasEmail ? ' on' : ''}" id="contactsHasEmailChip">Has email</button>
         <button type="button" class="chip${state.hasPhone ? ' on' : ''}" id="contactsHasPhoneChip">Has phone</button>
         <span class="filter-label" style="margin-left:6px">Created</span>
-        <input class="tb-input doc-age-date" id="contactsCreatedFrom" type="date" aria-label="Created on or after" value="${state.createdFrom}" />
-        <span class="doc-age-sep">–</span>
-        <input class="tb-input doc-age-date" id="contactsCreatedTo" type="date" aria-label="Created on or before" value="${state.createdTo}" />
+        <div class="date-range-field">
+          <input class="doc-age-date" id="contactsCreatedFrom" type="date" aria-label="Created on or after" value="${state.createdFrom}" />
+          <span class="doc-age-sep">–</span>
+          <input class="doc-age-date" id="contactsCreatedTo" type="date" aria-label="Created on or before" value="${state.createdTo}" />
+        </div>
         <span class="filter-label" style="margin-left:6px">Updated</span>
-        <input class="tb-input doc-age-date" id="contactsUpdatedFrom" type="date" aria-label="Updated on or after" value="${state.updatedFrom}" />
-        <span class="doc-age-sep">–</span>
-        <input class="tb-input doc-age-date" id="contactsUpdatedTo" type="date" aria-label="Updated on or before" value="${state.updatedTo}" />
-        ${fcount ? `<button class="btn" type="button" id="contactsFilterResetBtn" style="margin-left:auto">Reset filters</button>` : ''}
+        <div class="date-range-field">
+          <input class="doc-age-date" id="contactsUpdatedFrom" type="date" aria-label="Updated on or after" value="${state.updatedFrom}" />
+          <span class="doc-age-sep">–</span>
+          <input class="doc-age-date" id="contactsUpdatedTo" type="date" aria-label="Updated on or before" value="${state.updatedTo}" />
+        </div>
       </div>
       ${rows.length ? `<div class="gridwrap" style="overflow-x:auto;border:1px solid var(--border-lt);border-radius:8px"><table class="contacts-tbl"><thead><tr>
           ${sortHeader('name', 'NAME')}
