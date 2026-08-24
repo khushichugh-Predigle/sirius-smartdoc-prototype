@@ -55,7 +55,10 @@
 
   function applyNavVisibility(role) {
     const vis = navVisibility(role);
-    document.querySelectorAll('.nav-item[data-view]').forEach((el) => {
+    // Only the flat top-level items (direct children of .sidenav) are gated
+    // by `views` — items nested inside a collapsible .nav-sub-items group are
+    // governed entirely by that group's own visibility/expand state below.
+    document.querySelectorAll('.sidenav > .nav-item[data-view]').forEach((el) => {
       el.style.display = vis.views.indexOf(el.dataset.view) === -1 ? 'none' : '';
     });
     document.querySelectorAll('.nav-sub-h[data-sub]').forEach((head) => {
