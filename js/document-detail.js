@@ -30,6 +30,8 @@
   const state = {
     providerSearchQuery: '',
     providerSearchMode: 'match',  // 'match' (replace card #1) | 'add' (append a new peer card)
+    providerSearchView: 'list',   // 'list' | 'form' — same two-view stack as contactsModal
+    providerFormValues: {},
     providerSearchSpecialty: '',
     providerSearchSortCol: 'name',
     providerSearchSortAsc: true,
@@ -634,16 +636,6 @@
 
   function selectProviderMatch(id) {
     state.providerMatchSelectedId = id;
-    if (id === 'new') {
-      // Excel Scenario 1/3: create from the extracted values. The card stays a
-      // draft until Save & Submit, but is a peer row immediately so it can be
-      // ranked (Scenario 3 demotes it to #2 before it exists in CPR).
-      const p = state.providers[0];
-      if (p) { p.origin = 'draft'; p.cprId = null; }
-      renderForm();
-      toast('New prescriber will be created on Save & Submit');
-      return;
-    }
     const rec = CPR_PRESCRIBERS.find((r) => r.id === id);
     if (!rec) return;
     const existing = state.providers.find((p) => p.cprId === id);
@@ -1843,11 +1835,10 @@
       renderForm();
     });
 
-    // "+ Add New" always opens the search popup first — the reviewer picks an
-    // existing on-file prescriber or creates a fresh one from there, rather
-    // than a blank card appearing directly in the list.
+    // "+ Add New" opens the create form directly — same directAdd behavior
+    // as Referral Source's "+ Add new referral source".
     document.getElementById('addProviderBtn').addEventListener('click', () => {
-      openProviderSearch('add');
+      openProviderAddForm('add');
     });
   });
 
@@ -1884,18 +1875,35 @@
     }
   }
 
-  
-  // 'match' (from card #1's subtitle/magnifier) replaces the extracted card in
-  // place. 'add' (from the section's "+ Add New" button) always appends a new
-  // peer card, never touching #1.
+  /* ---------- Provider search / add popup ----------
+   * Same list<->form two-view single modal as the Contacts / Referral Source
+   * popup (contactsModal / renderContactsModal) — reused structurally
+   * (reclassify-modal wide, back-icon head, list vs form body, foot only in
+   * form view) so this reads as the same component, not a one-off.
+   *
+   * mode 'match' (opened from card #1's subtitle/magnifier): the list is for
+   * disambiguating CPR+ candidates for the extracted prescriber; picking a
+   * row replaces card #1 in place, keeping rank #1.
+   * mode 'add' (opened from the section's "+ Add New" button): always
+   * appends a new peer card, never touching #1. */
   function openProviderSearch(mode) {
     state.providerSearchMode = mode || 'match';
+    state.providerSearchView = 'list';
     state.providerSearchQuery = '';
     state.providerSearchSpecialty = '';
     state.providerSearchSortCol = 'name';
     state.providerSearchSortAsc = true;
-    document.getElementById('providerSearchTitle').textContent = state.providerSearchMode === 'add' ? 'Add Provider' : 'Match Provider';
-    renderProviderSearchModal();
+    renderProviderModal();
+    document.getElementById('providerSearchOverlay').style.display = 'flex';
+  }
+
+  // "+ Add New" (§1/§11) skips the list entirely and opens the create form
+  // directly — the same directAdd behavior as "+ Add new referral source".
+  function openProviderAddForm(mode) {
+    state.providerSearchMode = mode || 'add';
+    state.providerSearchView = 'form';
+    state.providerFormValues = providerFormSeedValues();
+    renderProviderModal();
     document.getElementById('providerSearchOverlay').style.display = 'flex';
   }
 
@@ -1903,10 +1911,37 @@
     document.getElementById('providerSearchOverlay').style.display = 'none';
   }
 
-  function pickProviderSearchResult(id) {
-    if (state.providerSearchMode === 'add') addProviderViaSearch(id);
-    else selectProviderMatch(id);
-    closeProviderSearch();
+  function providerModalTitleText() {
+    if (state.providerSearchView === 'form') return 'Add New Prescriber';
+    return state.providerSearchMode === 'add' ? 'Add Provider' : 'Match Provider';
+  }
+
+  function renderProviderModal() {
+    document.getElementById('providerSearchTitle').textContent = providerModalTitleText();
+    document.getElementById('providerSearchBackBtn').style.display = state.providerSearchView === 'form' ? 'inline-flex' : 'none';
+    const body = document.getElementById('providerSearchBody');
+    const foot = document.getElementById('providerSearchFoot');
+    if (state.providerSearchView === 'form') {
+      body.innerHTML = providerFormMarkup(state.providerFormValues);
+      wireProviderFormSelects(state.providerFormValues);
+      foot.style.display = 'flex';
+      foot.innerHTML = `<button class="btn" type="button" id="providerFormCancelBtn">Cancel</button>
+        <button class="btn primary" type="button" id="providerFormCreateBtn">Create</button>`;
+      // Same as Contacts' directAdd: Cancel always goes to the list (never
+      // closes outright) — even a form opened directly still has a list of
+      // on-file providers to fall back to browsing/searching.
+      document.getElementById('providerFormCancelBtn').addEventListener('click', () => {
+        state.providerSearchView = 'list';
+        renderProviderModal();
+      });
+      document.getElementById('providerFormCreateBtn').addEventListener('click', createProviderFromForm);
+    } else {
+      body.innerHTML = providerListMarkup();
+      foot.style.display = 'none';
+      foot.innerHTML = '';
+      wireProviderListEvents();
+    }
+    document.getElementById('providerSearchBackBtn').onclick = () => { state.providerSearchView = 'list'; renderProviderModal(); };
   }
 
   const PROVIDER_SEARCH_SORT_KEY = {
@@ -1921,22 +1956,36 @@
     return `<th data-prov-sort-col="${col}" style="cursor:pointer;user-select:none">${label}${active ? ` <span style="color:var(--t4)">${state.providerSearchSortAsc ? '▲' : '▼'}</span>` : ''}</th>`;
   }
 
-  // Same toolbar + sortable gridwrap table as the Contacts / Referral Source
-  // popup (contactsListMarkup) — reused visually so this reads as the same
-  // component, not a one-off search box.
-  function renderProviderSearchModal() {
+  // §2 — in 'match' mode, actual CPR+ candidates for the extracted prescriber
+  // sort to the top (highest score first) regardless of the chosen column;
+  // search/filter/sort all still apply within and below that group.
+  function providerListRows() {
     const q = (state.providerSearchQuery || '').trim().toLowerCase();
     let rows = CPR_PRESCRIBERS.filter((r) => {
       if (q && !`${r.first_name} ${r.last_name} ${r.specialty} ${r.organization} ${r.npi}`.toLowerCase().includes(q)) return false;
       if (state.providerSearchSpecialty && r.specialty !== state.providerSearchSpecialty) return false;
       return true;
     });
+    const scored = state.providerSearchMode === 'match'
+      ? new Map(providerCandidates().map((c) => [c.rec.id, c.score]))
+      : new Map();
     const sortFn = PROVIDER_SEARCH_SORT_KEY[state.providerSearchSortCol] || PROVIDER_SEARCH_SORT_KEY.name;
-    rows.sort((a, b) => (sortFn(a) < sortFn(b) ? -1 : sortFn(a) > sortFn(b) ? 1 : 0) * (state.providerSearchSortAsc ? 1 : -1));
-    const specialties = [...new Set(CPR_PRESCRIBERS.map((r) => r.specialty))].sort();
+    const dir = state.providerSearchSortAsc ? 1 : -1;
+    rows.sort((a, b) => {
+      const sa = scored.get(a.id) || 0, sb = scored.get(b.id) || 0;
+      if (sa !== sb) return sb - sa;
+      return (sortFn(a) < sortFn(b) ? -1 : sortFn(a) > sortFn(b) ? 1 : 0) * dir;
+    });
+    return { rows, scored };
+  }
 
-    const body = document.getElementById('providerSearchBody');
-    body.innerHTML = `
+  // Same toolbar + sortable gridwrap table as the Contacts / Referral Source
+  // popup (contactsListMarkup) — reused visually so this reads as the same
+  // component, not a one-off search box.
+  function providerListMarkup() {
+    const { rows, scored } = providerListRows();
+    const specialties = [...new Set(CPR_PRESCRIBERS.map((r) => r.specialty))].sort();
+    return `
       <div class="contacts-toolbar">
         <input type="search" id="providerSearchInput" placeholder="Search providers by name, specialty, organization, NPI…" value="${escapeHtml(state.providerSearchQuery || '')}" />
         <div class="contacts-org-filter" id="providerSearchSpecialtySelect"></div>
@@ -1951,7 +2000,7 @@
         </tr></thead><tbody>
           ${rows.map((r) => `
             <tr class="selectable" data-prov-id="${r.id}">
-              <td>${escapeHtml(r.first_name + ' ' + r.last_name)}${r.prof_designation ? `<br><span style="color:var(--t4);font-size:10.5px">${escapeHtml(r.prof_designation)}</span>` : ''}</td>
+              <td>${escapeHtml(r.first_name + ' ' + r.last_name)}${scored.has(r.id) ? ' <span class="match-status-badge match-status-active" style="margin-left:4px">Match</span>' : ''}${r.prof_designation ? `<br><span style="color:var(--t4);font-size:10.5px">${escapeHtml(r.prof_designation)}</span>` : ''}</td>
               <td>${escapeHtml(r.specialty)}</td>
               <td>${escapeHtml(r.organization)}</td>
               <td style="font-family:monospace;font-size:11px">${escapeHtml(r.npi || '—')}</td>
@@ -1960,34 +2009,41 @@
         </tbody></table></div>`
         : `<div class="contacts-empty">No matching providers found.</div>`}
     `;
+  }
 
+  function wireProviderListEvents() {
+    const specialties = [...new Set(CPR_PRESCRIBERS.map((r) => r.specialty))].sort();
     CustomSelect.mount(document.getElementById('providerSearchSpecialtySelect'), {
       options: [{ label: 'All Specialties', value: '' }].concat(specialties.map((s) => ({ label: s, value: s }))),
       value: state.providerSearchSpecialty, ariaLabel: 'Filter by specialty',
-      onChange: (v) => { state.providerSearchSpecialty = v; renderProviderSearchModal(); },
+      onChange: (v) => { state.providerSearchSpecialty = v; renderProviderModal(); },
     });
     document.getElementById('providerSearchInput').addEventListener('input', (e) => {
       state.providerSearchQuery = e.target.value;
-      renderProviderSearchModalPreservingFocus('providerSearchInput');
+      renderProviderModalPreservingFocus('providerSearchInput');
     });
     document.querySelectorAll('tr[data-prov-id]').forEach((tr) => {
-      tr.addEventListener('click', () => pickProviderSearchResult(tr.dataset.provId));
+      tr.addEventListener('click', () => { selectProviderMatch(tr.dataset.provId); closeProviderSearch(); });
     });
     document.querySelectorAll('[data-prov-sort-col]').forEach((th) => th.addEventListener('click', () => {
       const col = th.dataset.provSortCol;
       if (state.providerSearchSortCol === col) state.providerSearchSortAsc = !state.providerSearchSortAsc;
       else { state.providerSearchSortCol = col; state.providerSearchSortAsc = true; }
-      renderProviderSearchModal();
+      renderProviderModal();
     }));
-    document.getElementById('providerSearchAddNewBtn').addEventListener('click', () => pickProviderSearchResult('new'));
+    document.getElementById('providerSearchAddNewBtn').addEventListener('click', () => {
+      state.providerSearchView = 'form';
+      state.providerFormValues = providerFormSeedValues();
+      renderProviderModal();
+    });
   }
 
-  function renderProviderSearchModalPreservingFocus(inputId) {
+  function renderProviderModalPreservingFocus(inputId) {
     const prev = document.getElementById(inputId);
     const hadFocus = !!prev && document.activeElement === prev;
     const selStart = hadFocus ? prev.selectionStart : null;
     const selEnd = hadFocus ? prev.selectionEnd : null;
-    renderProviderSearchModal();
+    renderProviderModal();
     if (hadFocus) {
       const next = document.getElementById(inputId);
       if (next) {
@@ -1997,28 +2053,142 @@
     }
   }
 
-  // "+ Add New" flow (§5): pick an on-file prescriber to link as a new peer
-  // row, or create a blank draft card — mirrors selectProviderMatch's Excel
-  // Scenario 1/2 handling but appends instead of replacing card #1.
-  function addProviderViaSearch(id) {
-    if (id === 'new') {
-      const p = addProviderFromRecord({}, 'draft', null);
-      state.collapsed[p.sub._id] = false;
-      syncPrescribedProvider();
-      renderForm();
-      toast('New prescriber card added — fill in details and Save & Submit to create in records');
+  /* ---------- Provider create form (§1/§11/§12) ----------
+   * Field set is generated straight from the schema's Provider subsections
+   * (Prescriber / Organization / License Info / Contacts) — not hand-typed —
+   * so it can never drift from what the ranked cards themselves show. Seq #
+   * is excluded: it's business-assigned by rank, never reviewer-entered.
+   * Layout reuses the exact Contacts 2-column grid (.contacts-field-grid /
+   * .reclassify-field / gridField) — same component, provider data. */
+  function providerFormFieldGroups() {
+    return (PROVIDER_TEMPLATE.subsections || []).map((sub) => ({
+      title: sub.title.trim(),
+      fields: sub.fields.filter((f) => f.key !== SEQ_FIELD_KEY),
+    }));
+  }
+
+  function providerFieldKeyByLabel(label) {
+    const want = label.trim().toLowerCase();
+    for (const sub of PROVIDER_TEMPLATE.subsections || []) {
+      const f = sub.fields.find((x) => x.label.trim().toLowerCase() === want);
+      if (f) return f.key;
+    }
+    return null;
+  }
+  const PROVIDER_FIRST_NAME_KEY = providerFieldKeyByLabel('First Name');
+  const PROVIDER_LAST_NAME_KEY = providerFieldKeyByLabel('Last Name');
+  const PROVIDER_SPECIALTY_KEY = providerFieldKeyByLabel('Specialty');
+
+  // mode 'match': prefill from the extracted card's current values, same as
+  // §11's "extracted information as the starting point". mode 'add': blank —
+  // this provider has no relationship to the document's extraction.
+  function providerFormSeedValues() {
+    if (state.providerSearchMode !== 'match') return {};
+    const p = state.providers[0];
+    if (!p) return {};
+    const values = {};
+    providerFields(p).forEach((f) => {
+      const v = state.fieldOverrides[f._key] !== undefined ? state.fieldOverrides[f._key] : f._value;
+      if (v) values[f.key] = v;
+    });
+    return values;
+  }
+
+  function providerFormFieldMarkup(f, values) {
+    const val = values[f.key] != null ? values[f.key] : '';
+    switch (f.type) {
+      case 'textarea':
+        return `<div class="reclassify-field full"><label>${escapeHtml(f.label)}</label><textarea data-pf-field="${f.key}" rows="3" placeholder="Optional note…">${escapeHtml(val)}</textarea></div>`;
+      case 'checkbox':
+        return `<div class="reclassify-field full contacts-checkbox-row"><label class="contacts-checkbox"><input type="checkbox" data-pf-field="${f.key}" ${val ? 'checked' : ''} /> ${escapeHtml(f.label)}</label></div>`;
+      case 'date':
+        return `<div class="reclassify-field"><label>${escapeHtml(f.label)}</label><input type="text" data-pf-field="${f.key}" value="${escapeHtml(val)}" placeholder="MM/DD/YYYY" /></div>`;
+      case 'select':
+        return `<div class="reclassify-field"><label>${escapeHtml(f.label)}${f.key === PROVIDER_SPECIALTY_KEY ? ' <span class="req">*</span>' : ''}</label><div id="pf-select-${f.key}"></div><input type="hidden" data-pf-hidden="${f.key}" value="${escapeHtml(val)}" /></div>`;
+      default:
+        return `<div class="reclassify-field"><label>${escapeHtml(f.label)}${f.key === PROVIDER_FIRST_NAME_KEY || f.key === PROVIDER_LAST_NAME_KEY ? ' <span class="req">*</span>' : ''}</label><input type="text" data-pf-field="${f.key}" value="${escapeHtml(val)}" /></div>`;
+    }
+  }
+
+  function providerFormMarkup(values) {
+    const groups = providerFormFieldGroups();
+    return `<div class="contacts-field-grid">
+      ${groups.map((g) => `
+        <div class="reclassify-field full provider-form-group-heading">${escapeHtml(g.title)}</div>
+        ${g.fields.map((f) => providerFormFieldMarkup(f, values)).join('')}
+      `).join('')}
+    </div>`;
+  }
+
+  function wireProviderFormSelects(values) {
+    (PROVIDER_TEMPLATE.subsections || []).forEach((sub) => {
+      sub.fields.forEach((f) => {
+        if (f.key === SEQ_FIELD_KEY || f.type !== 'select') return;
+        const el = document.getElementById('pf-select-' + f.key);
+        if (!el) return;
+        const hidden = document.querySelector(`[data-pf-hidden="${f.key}"]`);
+        const opts = (f.options || []).map((o) => ({ label: o.label, value: o.label }));
+        if (f.metadata && f.metadata.multiple) {
+          const vals = String(values[f.key] || '').split(/[\s,]+/).filter(Boolean);
+          CustomSelect.mount(el, {
+            options: opts, values: vals, multiple: true, placeholder: 'Select value',
+            onChangeMulti: (vs) => { hidden.value = vs.join(' '); },
+          });
+        } else {
+          CustomSelect.mount(el, {
+            options: opts, value: values[f.key] || '', placeholder: 'Select value',
+            onChange: (v) => { hidden.value = v; },
+          });
+        }
+      });
+    });
+  }
+
+  function createProviderFromForm() {
+    const values = {};
+    document.querySelectorAll('#providerSearchBody [data-pf-field]').forEach((el) => {
+      values[el.dataset.pfField] = el.type === 'checkbox' ? el.checked : el.value.trim();
+    });
+    document.querySelectorAll('#providerSearchBody [data-pf-hidden]').forEach((el) => {
+      values[el.dataset.pfHidden] = el.value;
+    });
+    if (!String(values[PROVIDER_FIRST_NAME_KEY] || '').trim() || !String(values[PROVIDER_LAST_NAME_KEY] || '').trim()) {
+      toast('First Name and Last Name are required');
       return;
     }
-    const rec = CPR_PRESCRIBERS.find((r) => r.id === id);
-    if (!rec) return;
-    if (providerAlreadyLinked(id)) {
-      toast('This prescriber is already assigned to this patient — no changes will be made');
+    if (!String(values[PROVIDER_SPECIALTY_KEY] || '').trim()) {
+      toast('Specialty is required');
       return;
     }
-    addProviderFromRecord(rec, 'cpr', rec.id);
+    const p = makeProvider('draft', null, null);
+    providerFields(p).forEach((f) => {
+      const v = values[f.key];
+      if (v !== undefined && v !== '' && v !== false) state.fieldOverrides[f._key] = v;
+    });
+    if (state.providerSearchMode === 'match') {
+      const idx = state.providers.findIndex((x) => x.origin === 'extracted');
+      if (idx >= 0) {
+        // Preserve the original extraction per field so "Use extracted:" keeps
+        // working on anything the reviewer left as-is or changed.
+        const extractedProvider = state.providers[idx];
+        providerFields(p).forEach((f) => {
+          const src = providerFields(extractedProvider).find((x) => x.key === f.key);
+          const ev = src ? (state.fieldOverrides[src._key] !== undefined ? state.fieldOverrides[src._key] : src._value) : '';
+          if (ev) f._extracted = ev;
+        });
+        state.providers.splice(idx, 1, p);
+      } else {
+        state.providers.unshift(p);
+      }
+      state.providerMatchSelectedId = 'new';
+    } else {
+      state.providers.push(p);
+    }
+    renumberProviders();
+    closeProviderSearch();
     renderForm();
     syncPrescribedProvider();
-    toast(`${rec.first_name} ${rec.last_name} added to this patient's care team`);
+    toast('New prescriber added — will be created in records on Save & Submit');
   }
 
   // Hook into wireModals

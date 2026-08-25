@@ -249,7 +249,8 @@
         ? `<span class="doc-claim-indicator" data-tooltip="Claimed by ${r.claimedBy.name === actor.name ? 'you' : escapeHtml(r.claimedBy.name)}">${ICON_CLAIM}<span class="doc-claim-dot"></span></span>`
         : '';
       tr.innerHTML = `
-        <td><span class="doc-cell">${claimIndicator}<span class="doc-cell-text">${escapeHtml(r.document)}</span></span></td>
+        <td class="doc-lock-cell">${claimIndicator}</td>
+        <td><span class="doc-cell"><span class="doc-cell-text">${escapeHtml(r.document)}</span></span></td>
         <td>${escapeHtml(r.patient || '-')}</td>
         <td>${escapeHtml(r.mrn)}</td>
         <td>${escapeHtml(r.type)}</td>

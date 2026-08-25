@@ -147,6 +147,10 @@ button:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(5, 144, 84, 0.1
   width: 20px; height: 20px; border-radius: 50%;
   background: var(--chrome); border: 1px solid var(--border-lt); color: var(--t3); vertical-align: middle;
 }
+/* Dedicated lock column — first in the queue table, so the DOCUMENT column's
+   filenames all start at the same x position whether or not a row is
+   claimed, instead of the icon shifting inline text over per-row. */
+.doc-lock-cell { text-align: center; padding-left: 0 !important; padding-right: 0 !important; }
 
 /* Fixed-position tooltip (see initFixedTooltips in shell.js) — same look as
    the CSS-only [data-tip] tooltip, for elements clipped by an overflow:hidden
