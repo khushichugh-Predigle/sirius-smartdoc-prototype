@@ -673,6 +673,31 @@
     renderProviderModal();
   }
 
+  // Writes a CPR+ record's values straight onto the EXISTING extracted
+  // provider's own fields — never clones or swaps in a different object, so
+  // selecting a match can never appear as "another provider section". The
+  // pristine document extraction (field._extracted, set once at load) is
+  // left untouched, so "Use extracted:" keeps offering it on any field the
+  // record changed; only field._value (the field's baseline) moves to the
+  // record's value, and any prior reviewer override on that field is
+  // cleared — the record becomes the new baseline, not a manual edit.
+  function populateExtractedProviderFromRecord(rec) {
+    const p = state.providers.find((x) => x.origin === 'extracted');
+    if (!p) return null;
+    providerFields(p).forEach((f) => {
+      const mapped = PROVIDER_RECORD_MAP[f.label.trim().toLowerCase()];
+      if (!mapped) return;
+      const newVal = rec[mapped];
+      if (!newVal) return;
+      delete state.fieldOverrides[f._key];
+      f._value = newVal;
+    });
+    p.origin = 'cpr';
+    p.cprId = rec.id;
+    p.record = rec;
+    return p;
+  }
+
   function selectProviderMatch(id) {
     state.providerMatchSelectedId = id;
     const rec = CPR_PRESCRIBERS.find((r) => r.id === id);
@@ -688,23 +713,8 @@
       toast('This prescriber is already assigned to this patient — no changes will be made');
       return;
     }
-    // Replace the extracted card in place, keeping rank #1, and remember the
-    // extracted values so per-field "Use extracted:" still works.
-    const idx = state.providers.findIndex((p) => p.origin === 'extracted');
-    const extractedValues = {};
-    if (idx >= 0) {
-      providerFields(state.providers[idx]).forEach((f) => {
-        const mapped = PROVIDER_RECORD_MAP[f.label.trim().toLowerCase()];
-        if (mapped) extractedValues[mapped] = (state.fieldOverrides[f._key] !== undefined ? state.fieldOverrides[f._key] : f._value) || '';
-      });
-    }
-    const p = makeProvider('cpr', rec, rec.id);
-    providerFields(p).forEach((f) => {
-      const mapped = PROVIDER_RECORD_MAP[f.label.trim().toLowerCase()];
-      if (mapped && extractedValues[mapped]) f._extracted = extractedValues[mapped];
-    });
-    if (idx >= 0) state.providers.splice(idx, 1, p); else state.providers.unshift(p);
-    renumberProviders();
+    const p = populateExtractedProviderFromRecord(rec);
+    if (!p) return;
     renderForm();
     syncPrescribedProvider();
     toast(`Linked to ${rec.first_name} ${rec.last_name} — differing values offer “Use extracted”`);
@@ -2359,30 +2369,34 @@
       }
     }
 
-    const p = makeProvider('draft', null, null);
-    p.origin = editingId ? 'cpr' : 'draft';
-    p.cprId = editingId || null;
-    providerFields(p).forEach((f) => {
-      const v = values[f.key];
-      if (v !== undefined && v !== '' && v !== false) state.fieldOverrides[f._key] = v;
-    });
     if (state.providerSearchMode === 'match') {
-      const idx = state.providers.findIndex((x) => x.origin === 'extracted');
-      if (idx >= 0) {
-        // Preserve the original extraction per field so "Use extracted:" keeps
-        // working on anything the reviewer left as-is or changed.
-        const extractedProvider = state.providers[idx];
-        providerFields(p).forEach((f) => {
-          const src = providerFields(extractedProvider).find((x) => x.key === f.key);
-          const ev = src ? (state.fieldOverrides[src._key] !== undefined ? state.fieldOverrides[src._key] : src._value) : '';
-          if (ev) f._extracted = ev;
-        });
-        state.providers.splice(idx, 1, p);
-      } else {
-        state.providers.unshift(p);
-      }
+      // Same rule as populateExtractedProviderFromRecord: write these
+      // reviewer-entered values onto the EXISTING extracted provider's own
+      // fields — never a new object — so this can never read as "another
+      // provider section". field._value moves to the reviewer's value (the
+      // form-typed baseline, not the record and not the pristine
+      // extraction), and it's written via fieldOverrides — since the
+      // reviewer typed it by hand, it correctly shows as an edit (blue), not
+      // a plain record-differs (amber).
+      let p = state.providers.find((x) => x.origin === 'extracted');
+      if (!p) { p = makeProvider('draft', null, null); state.providers.unshift(p); }
+      providerFields(p).forEach((f) => {
+        const v = values[f.key];
+        if (v !== undefined && v !== '' && v !== false) state.fieldOverrides[f._key] = v;
+      });
+      p.origin = editingId ? 'cpr' : 'draft';
+      p.cprId = editingId || null;
       state.providerMatchSelectedId = editingId || 'new';
     } else {
+      // 'add' mode genuinely appends a distinct new provider — that's the
+      // whole point of Add New, unlike Match.
+      const p = makeProvider('draft', null, null);
+      p.origin = editingId ? 'cpr' : 'draft';
+      p.cprId = editingId || null;
+      providerFields(p).forEach((f) => {
+        const v = values[f.key];
+        if (v !== undefined && v !== '' && v !== false) state.fieldOverrides[f._key] = v;
+      });
       state.providers.push(p);
     }
     renumberProviders();
