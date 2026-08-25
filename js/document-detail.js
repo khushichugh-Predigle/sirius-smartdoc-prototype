@@ -562,13 +562,18 @@
 
   function fieldMarkup(field) {
     const wide = field.type === 'textarea';
+    // Checkbox fields render their own label text inline next to the box
+    // (see fieldControlMarkup's 'checkbox' case) — showing the generic
+    // field label above it too would just repeat the same text twice.
+    const isCheckbox = field.type === 'checkbox';
+    const showLabelRow = !isCheckbox || field.required || confidenceMarkup(field) || evidenceMarkup(field);
     return `<div class="field${wide ? ' wide' : ''}">
-      <label for="${field._key}">
-        <span>${escapeHtml(field.label)}</span>
+      ${showLabelRow ? `<label for="${field._key}">
+        ${isCheckbox ? '' : `<span>${escapeHtml(field.label)}</span>`}
         ${field.required ? '<em>*</em>' : ''}
         ${confidenceMarkup(field)}
         ${evidenceMarkup(field)}
-      </label>
+      </label>` : ''}
       ${fieldControlMarkup(field)}
     </div>`;
   }
@@ -653,6 +658,7 @@
 
   /* ---------- Referral Source lookup (typeahead + "+ Add new" -> popup) ---------- */
   const ADD_NEW_REFERRAL = '__add_new_referral__';
+  const VIEW_ALL_REFERRAL = '__view_all_referral__';
 
   function referralSourceName(contact) {
     return `${contact.first_name} ${contact.last_name}`;
@@ -680,12 +686,22 @@
       if (c) opts.unshift({ label: referralSourceName(c), secondary: c.organization, value: c.id });
     }
     // Pinned first, not last — with 15+ contacts this needs to be reachable
-    // without scrolling through the whole alphabetical list.
-    if (!disabled) opts.unshift({ label: '+ Add new referral source', value: ADD_NEW_REFERRAL, cls: 'search-select-option-action' });
+    // without scrolling through the whole alphabetical list. "View/search
+    // all" comes second, for when a name match alone isn't enough to tell
+    // similarly-named contacts apart (e.g. multiple John Smiths).
+    if (!disabled) {
+      opts.unshift({ label: 'Search all referral sources…', value: VIEW_ALL_REFERRAL, cls: 'search-select-option-action' });
+      opts.unshift({ label: '+ Add new referral source', value: ADD_NEW_REFERRAL, cls: 'search-select-option-action' });
+    }
     const controller = CustomSelect.mount(el, {
       options: opts, value: value || '', ariaLabel: 'Referral Source', placeholder: 'Search referral source…', disabled: !!disabled,
       onChange: (v) => {
         if (v === ADD_NEW_REFERRAL) {
+          controller.setValue(state.fieldOverrides[key] !== undefined ? state.fieldOverrides[key] : value);
+          openReferralPopup(key, { directAdd: true });
+          return;
+        }
+        if (v === VIEW_ALL_REFERRAL) {
           controller.setValue(state.fieldOverrides[key] !== undefined ? state.fieldOverrides[key] : value);
           openReferralPopup(key);
           return;
@@ -698,17 +714,21 @@
   /* ---------- Contacts Management (search/create/edit/delete + select-a-
    * referral-source), reusing the reclassify-modal shell (widened via
    * .wide) — see the Referral Source lookup's "+ Add new" entry point. ---------- */
-  const CONTACT_FIELDS = [
-    ['first_name', 'First Name', true], ['last_name', 'Last Name', true],
-    ['title', 'Title', false], ['professional_designation', 'Professional Designation', false],
-    ['organization', 'Organization', false], ['associated_org', 'Associated Org', false],
-    ['address', 'Address', false], ['city', 'City', false],
-    ['state', 'State', false], ['zip', 'Zip', false],
-    ['office_phone', 'Office Phone', false], ['home_phone', 'Home Phone', false],
-    ['fax', 'Fax', false], ['email', 'Email', false],
-    ['site', 'Site', false],
-  ];
   const ORG_TYPES = ['Doctor', 'Hospital', 'Ancillary Provider', 'Payer'];
+  // Real CPR+ site list (from the actual Site dropdown) — "Do Not Use" sites
+  // are kept verbatim since that's how they're labeled in the source system.
+  const SITES = [
+    'Do Not Use - Philadelphia - PA', 'Los Angeles - CA', 'New York - NY',
+    'Kansas City - KS', 'Do Not Use - Dallas - TX', 'Omaha - NE', 'Columbus - OH',
+  ];
+
+  function associatedOrgOptions(orgType) {
+    const list = (window.CONTACTS || [])
+      .filter((c) => !orgType || c.org_type === orgType)
+      .map((c) => c.organization)
+      .filter(Boolean);
+    return [...new Set(list)].sort();
+  }
 
   const contactsModal = {
     open: false, mode: 'select', targetFieldKey: null, view: 'list', search: '', orgTypeFilter: '', editingId: null, formValues: {}, deleteId: null, sortCol: 'name', sortAsc: true,
@@ -741,13 +761,23 @@
     };
   }
 
-  function openReferralPopup(key) {
+  function openReferralPopup(key, opts) {
+    opts = opts || {};
     contactsModal.open = true;
     contactsModal.mode = 'select';
     contactsModal.targetFieldKey = key;
-    contactsModal.view = 'list';
     contactsModal.search = '';
     contactsModal.orgTypeFilter = '';
+    if (opts.directAdd) {
+      // "+ Add new" means the user has already decided to add a new
+      // contact — jump straight to the form instead of making them find
+      // and click "+Add New" again from a list they don't want to search.
+      contactsModal.view = 'form';
+      contactsModal.editingId = 'new';
+      contactsModal.formValues = Object.assign({ org_type: '', referral_source: true }, prescriberDefaults());
+    } else {
+      contactsModal.view = 'list';
+    }
     renderContactsModal();
     document.getElementById('contactsOverlay').style.display = 'flex';
   }
@@ -883,12 +913,15 @@
     `;
   }
 
-  function contactFormFieldsMarkup(c) {
-    return CONTACT_FIELDS.map(([key, label, required]) => `
-      <div class="reclassify-field${key === 'address' ? ' full' : ''}">
-        <label>${label}${required ? ' <span class="req">*</span>' : ''}</label>
-        <input type="${key === 'email' ? 'email' : 'text'}" data-contact-field="${key}" value="${escapeHtml(c[key] || '')}" />
-      </div>`).join('');
+  /* Field order/grouping/types mirror the real CPR+ Contact/Notes screen —
+   * see the identical layout in modules/contacts/contacts.js (this is the
+   * same contact-management micro-screen, reused here as a popup). */
+  function contactSubfield(label, key, values, opts) {
+    opts = opts || {};
+    return `<div class="contacts-subfield" style="flex:${opts.flex || 1}">
+      <label>${label}${opts.required ? ' <span class="req">*</span>' : ''}</label>
+      <input type="${opts.type || 'text'}" data-contact-field="${key}" value="${escapeHtml(values[key] || '')}" />
+    </div>`;
   }
 
   function contactsFormMarkup() {
@@ -896,22 +929,62 @@
     const c = isNew ? contactsModal.formValues : ((window.CONTACTS || []).find((x) => x.id === contactsModal.editingId) || {});
     const values = Object.assign({}, c, contactsModal.formValues);
     return `
-      <div class="contacts-field-grid">
-        ${contactFormFieldsMarkup(values)}
-        <div class="reclassify-field">
-          <label>Org Type <span class="req">*</span></label>
-          <div id="contactOrgTypeSelect"></div>
+      <div class="contacts-form-layout">
+        <div class="contacts-form-fields">
+          <div class="contacts-compound-row">
+            ${contactSubfield('First Name', 'first_name', values, { required: true })}
+            ${contactSubfield('Last Name', 'last_name', values, { required: true })}
+          </div>
+          <div class="reclassify-field"><label>Title</label><input type="text" data-contact-field="title" value="${escapeHtml(values.title || '')}" /></div>
+          <div class="reclassify-field"><label>Prof Designation</label><input type="text" data-contact-field="professional_designation" value="${escapeHtml(values.professional_designation || '')}" /></div>
+          <div class="reclassify-field"><label>Organization</label><input type="text" data-contact-field="organization" value="${escapeHtml(values.organization || '')}" /></div>
+          <div class="reclassify-field"><label>Address</label><input type="text" data-contact-field="address" value="${escapeHtml(values.address || '')}" /></div>
+          <div class="contacts-compound-row">
+            ${contactSubfield('City', 'city', values, { flex: 2 })}
+            ${contactSubfield('State', 'state', values, { flex: 1 })}
+            ${contactSubfield('ZIP', 'zip', values, { flex: 1 })}
+          </div>
+          <div class="contacts-compound-row">
+            ${contactSubfield('Office', 'office_phone', values, { flex: 2 })}
+            ${contactSubfield('Ext', 'office_ext', values, { flex: 1 })}
+            ${contactSubfield('Fax', 'office_fax', values, { flex: 2 })}
+          </div>
+          <div class="contacts-compound-row">
+            ${contactSubfield('Home', 'home_phone', values, { flex: 2 })}
+            ${contactSubfield('Ext', 'home_ext', values, { flex: 1 })}
+            ${contactSubfield('Fax', 'home_fax', values, { flex: 2 })}
+          </div>
+          <div class="contacts-compound-row">
+            ${contactSubfield('Pager', 'pager', values, { flex: 1 })}
+            ${contactSubfield('Cell', 'cell', values, { flex: 1 })}
+          </div>
+          <div class="reclassify-field"><label>Email</label><input type="email" data-contact-field="email" value="${escapeHtml(values.email || '')}" /></div>
+          <div class="reclassify-field"><label>Site</label><div id="contactSiteSelect"></div></div>
+          <div class="reclassify-field"><label>Org Type <span class="req">*</span></label><div id="contactOrgTypeSelect"></div></div>
+          <div class="reclassify-field"><label>Associated Org</label><div id="contactAssociatedOrgSelect"></div></div>
+          <div class="contacts-compound-row contacts-checkbox-row">
+            <label class="contacts-checkbox"><input type="checkbox" id="contactReferralFlag" ${values.referral_source ? 'checked' : ''} /> Referral Source</label>
+            <label class="contacts-checkbox"><input type="checkbox" id="contactWebAccessFlag" ${values.allow_web_access ? 'checked' : ''} /> Allow Web Access?</label>
+            <label class="contacts-checkbox"><input type="checkbox" id="contactPrimaryFlag" ${values.primary_contact ? 'checked' : ''} /> Primary Contact</label>
+          </div>
         </div>
-        <div class="reclassify-field">
-          <label class="contacts-checkbox"><input type="checkbox" id="contactReferralFlag" ${values.referral_source ? 'checked' : ''} /> Referral Source <span class="req">*</span></label>
-        </div>
-        <div class="reclassify-field full">
+        <div class="contacts-form-notes">
           <label>Notes</label>
-          <textarea id="contactNotes" rows="2" placeholder="Optional note…">${escapeHtml(values.notes || '')}</textarea>
+          <textarea id="contactNotes" placeholder="Optional note…">${escapeHtml(values.notes || '')}</textarea>
         </div>
       </div>
       <input type="hidden" id="contactOrgTypeValue" value="${escapeHtml(values.org_type || '')}" />
+      <input type="hidden" id="contactAssociatedOrgValue" value="${escapeHtml(values.associated_org || '')}" />
+      <input type="hidden" id="contactSiteValue" value="${escapeHtml(values.site || '')}" />
     `;
+  }
+
+  function mountAssociatedOrgSelect(orgType, value) {
+    CustomSelect.mount(document.getElementById('contactAssociatedOrgSelect'), {
+      options: associatedOrgOptions(orgType).map((o) => ({ label: o, value: o })),
+      value: value || '', placeholder: orgType ? 'Select organization…' : 'Select org type first…', ariaLabel: 'Associated org', disabled: !orgType,
+      onChange: (v) => { document.getElementById('contactAssociatedOrgValue').value = v; },
+    });
   }
 
   function contactsFormFootMarkup() {
@@ -947,9 +1020,24 @@
     wireContactsModalEvents();
   }
 
+  function renderContactsModalPreservingFocus(inputId) {
+    const prev = document.getElementById(inputId);
+    const hadFocus = !!prev && document.activeElement === prev;
+    const selStart = hadFocus ? prev.selectionStart : null;
+    const selEnd = hadFocus ? prev.selectionEnd : null;
+    renderContactsModal();
+    if (hadFocus) {
+      const next = document.getElementById(inputId);
+      if (next) {
+        next.focus();
+        if (selStart != null) { try { next.setSelectionRange(selStart, selEnd); } catch (e) { /* not all input types support this */ } }
+      }
+    }
+  }
+
   function wireContactsModalEvents() {
     if (contactsModal.view === 'list') {
-      document.getElementById('contactsSearchInput').addEventListener('input', (e) => { contactsModal.search = e.target.value; renderContactsModal(); });
+      document.getElementById('contactsSearchInput').addEventListener('input', (e) => { contactsModal.search = e.target.value; renderContactsModalPreservingFocus('contactsSearchInput'); });
       document.getElementById('contactsAddNewBtn').addEventListener('click', () => {
         contactsModal.view = 'form';
         contactsModal.editingId = 'new';
@@ -1016,11 +1104,22 @@
         renderContactsModal();
       }));
     } else {
+      const orgTypeVal = document.getElementById('contactOrgTypeValue').value;
       CustomSelect.mount(document.getElementById('contactOrgTypeSelect'), {
         options: ORG_TYPES.map((t) => ({ label: t, value: t })),
-        value: document.getElementById('contactOrgTypeValue').value, placeholder: 'Select org type…', ariaLabel: 'Org type',
-        onChange: (v) => { document.getElementById('contactOrgTypeValue').value = v; },
+        value: orgTypeVal, placeholder: 'Select org type…', ariaLabel: 'Org type',
+        onChange: (v) => {
+          document.getElementById('contactOrgTypeValue').value = v;
+          document.getElementById('contactAssociatedOrgValue').value = '';
+          mountAssociatedOrgSelect(v, '');
+        },
       });
+      CustomSelect.mount(document.getElementById('contactSiteSelect'), {
+        options: SITES.map((s) => ({ label: s, value: s })),
+        value: document.getElementById('contactSiteValue').value, placeholder: 'Select site…', ariaLabel: 'Site',
+        onChange: (v) => { document.getElementById('contactSiteValue').value = v; },
+      });
+      mountAssociatedOrgSelect(orgTypeVal, document.getElementById('contactAssociatedOrgValue').value);
       document.getElementById('contactFormCancelBtn').addEventListener('click', () => { contactsModal.view = 'list'; renderContactsModal(); });
       document.getElementById('contactFormSaveBtn').addEventListener('click', saveContactForm);
     }
@@ -1040,7 +1139,11 @@
     const values = {};
     document.querySelectorAll('[data-contact-field]').forEach((el) => { values[el.dataset.contactField] = el.value.trim(); });
     values.org_type = document.getElementById('contactOrgTypeValue').value;
+    values.associated_org = document.getElementById('contactAssociatedOrgValue').value;
+    values.site = document.getElementById('contactSiteValue').value;
     values.referral_source = document.getElementById('contactReferralFlag').checked;
+    values.allow_web_access = document.getElementById('contactWebAccessFlag').checked;
+    values.primary_contact = document.getElementById('contactPrimaryFlag').checked;
     values.notes = document.getElementById('contactNotes').value.trim();
     if (!values.first_name || !values.last_name) { toast('First Name and Last Name are required'); return; }
     if (!values.org_type) { toast('Org Type is required'); return; }
