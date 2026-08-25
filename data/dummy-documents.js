@@ -570,7 +570,7 @@ window.DUMMY_DOCUMENTS = [
         },
         "provider_information": {
           "provider_last_name": {
-            "value": "KLEIN",
+            "value": "Mohammed",
             "confidence_score": 98,
             "page_number": 3,
             "source_line": "KLEIN",
@@ -584,7 +584,7 @@ window.DUMMY_DOCUMENTS = [
             "explanation": "Extracted from source document."
           },
           "specialty": {
-            "value": "Rheumatology",
+            "value": "Internal Medicine",
             "confidence_score": 91,
             "page_number": 2,
             "source_line": "Rheumatology",
@@ -605,7 +605,7 @@ window.DUMMY_DOCUMENTS = [
             "explanation": "Extracted from source document."
           },
           "provider_first_name": {
-            "value": "SARAH J",
+            "value": "Abdu",
             "confidence_score": 97,
             "page_number": 2,
             "source_line": "SARAH J",
@@ -633,7 +633,7 @@ window.DUMMY_DOCUMENTS = [
             "explanation": "Extracted from source document."
           },
           "organization_name": {
-            "value": "Great Lakes Rheumatology Associates",
+            "value": "Piedmont Physicians",
             "confidence_score": 95,
             "page_number": 3,
             "source_line": "Great Lakes Rheumatology Associates",
@@ -928,7 +928,7 @@ window.DUMMY_DOCUMENTS = [
         },
         "provider_information": {
           "provider_last_name": {
-            "value": "ONUOHA",
+            "value": "Costa",
             "confidence_score": 98,
             "page_number": 3,
             "source_line": "ONUOHA",
@@ -942,7 +942,7 @@ window.DUMMY_DOCUMENTS = [
             "explanation": "Extracted from source document."
           },
           "specialty": {
-            "value": "Pulmonology",
+            "value": "Gastroenterology",
             "confidence_score": 91,
             "page_number": 3,
             "source_line": "Pulmonology",
@@ -963,7 +963,7 @@ window.DUMMY_DOCUMENTS = [
             "explanation": "Extracted from source document."
           },
           "provider_first_name": {
-            "value": "MICHAEL T",
+            "value": "Mary",
             "confidence_score": 84,
             "page_number": 1,
             "source_line": "MICHAEL T",
@@ -1286,7 +1286,7 @@ window.DUMMY_DOCUMENTS = [
         },
         "provider_information": {
           "provider_last_name": {
-            "value": "DESAI",
+            "value": "Mohammed",
             "confidence_score": 95,
             "page_number": 4,
             "source_line": "DESAI",
@@ -1300,7 +1300,7 @@ window.DUMMY_DOCUMENTS = [
             "explanation": "Extracted from source document."
           },
           "specialty": {
-            "value": "Endocrinology",
+            "value": "Hospitalist",
             "confidence_score": 98,
             "page_number": 1,
             "source_line": "Endocrinology",
@@ -1321,7 +1321,7 @@ window.DUMMY_DOCUMENTS = [
             "explanation": "Extracted from source document."
           },
           "provider_first_name": {
-            "value": "ANITA R",
+            "value": "A.",
             "confidence_score": 99,
             "page_number": 4,
             "source_line": "ANITA R",

@@ -254,6 +254,7 @@
               <div class="form-head">
                 <h3 id="formSectionTitle"></h3>
                 <button type="button" class="add-drug-btn" id="addDrugBtn" style="display:none">+ Add Drug</button>
+                <button type="button" class="add-drug-btn" id="addProviderBtn" style="display:none">+ Add Provider</button>
                 <span class="saved"><img src="assets/icons/cloud-download.svg" width="14" height="14" alt="" /> Saved</span>
               </div>
               <form class="dynamic-form" id="dynamicForm" onsubmit="return false"></form>
@@ -297,6 +298,7 @@
         <footer class="action-bar">
           <button class="btn danger" type="button" id="rejectOpenBtn">Reject</button>
           <span></span>
+          <button class="btn" type="button" id="saveDraftBtn">Save</button>
           <button class="btn primary submit-btn" type="button" id="saveSubmitBtn">Save &amp; submit</button>
         </footer>
 
@@ -432,5 +434,15 @@
 <script src="data/intake-form-schema.js"></script>
 <script src="data/contacts.js"></script>
 <script src="js/document-detail.js"></script>
+
+<div class="reclassify-overlay" id="providerSearchOverlay" style="display:none">
+  <div class="reclassify-modal wide" role="dialog" aria-modal="true" style="max-width:780px">
+    <div class="reclassify-head">
+      <h3>Find Provider</h3>
+      <button type="button" class="reclassify-close" id="providerSearchCloseBtn" aria-label="Close">&times;</button>
+    </div>
+    <div class="reclassify-body" id="providerSearchBody" style="padding:0"></div>
+  </div>
+</div>
 </body>
 </html>

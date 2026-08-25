@@ -1051,7 +1051,7 @@ window.INTAKE_FORM_SCHEMA = {
                 },
                 {
                   "key": "38225a62-c31d-4e89-aa40-657253aa0933",
-                  "label": "TCMC \u2013 Anti-infective",
+                  "label": "TCMC – Anti-infective",
                   "iconPath": "",
                   "description": "",
                   "selectedNote": "",
@@ -2568,9 +2568,9 @@ window.INTAKE_FORM_SCHEMA = {
                   "nestedFields": []
                 },
                 {
-                  "key": "ee6ce8cd-88a9-47de-b8bb-cbbed641866c",
-                  "type": "text",
-                  "label": "Speciality",
+                  "key": "c1f4a7e2-5b93-4d18-9a26-7e3c8f0b1d45",
+                  "type": "select",
+                  "label": "Prof. Designation",
                   "required": false,
                   "hint": "",
                   "description": "",
@@ -2579,7 +2579,7 @@ window.INTAKE_FORM_SCHEMA = {
                   "hintIcon": "",
                   "conditions": [],
                   "order": 4,
-                  "placeholder": "Enter value",
+                  "placeholder": "Select value",
                   "pattern": "",
                   "layout": {
                     "col": 6
@@ -2591,7 +2591,264 @@ window.INTAKE_FORM_SCHEMA = {
                   "addButtonLabel": "",
                   "removeButtonLabel": "",
                   "items": [],
-                  "options": [],
+                  "options": [
+                    {
+                      "key": "opt-md",
+                      "label": "MD",
+                      "iconPath": "",
+                      "description": "",
+                      "selectedNote": "",
+                      "descriptionItems": []
+                    },
+                    {
+                      "key": "opt-do",
+                      "label": "DO",
+                      "iconPath": "",
+                      "description": "",
+                      "selectedNote": "",
+                      "descriptionItems": []
+                    },
+                    {
+                      "key": "opt-np",
+                      "label": "NP",
+                      "iconPath": "",
+                      "description": "",
+                      "selectedNote": "",
+                      "descriptionItems": []
+                    },
+                    {
+                      "key": "opt-pa-c",
+                      "label": "PA-C",
+                      "iconPath": "",
+                      "description": "",
+                      "selectedNote": "",
+                      "descriptionItems": []
+                    },
+                    {
+                      "key": "opt-rn",
+                      "label": "RN",
+                      "iconPath": "",
+                      "description": "",
+                      "selectedNote": "",
+                      "descriptionItems": []
+                    },
+                    {
+                      "key": "opt-pharmd",
+                      "label": "PharmD",
+                      "iconPath": "",
+                      "description": "",
+                      "selectedNote": "",
+                      "descriptionItems": []
+                    },
+                    {
+                      "key": "opt-facp",
+                      "label": "FACP",
+                      "iconPath": "",
+                      "description": "",
+                      "selectedNote": "",
+                      "descriptionItems": []
+                    },
+                    {
+                      "key": "opt-faan",
+                      "label": "FAAN",
+                      "iconPath": "",
+                      "description": "",
+                      "selectedNote": "",
+                      "descriptionItems": []
+                    },
+                    {
+                      "key": "opt-faasm",
+                      "label": "FAASM",
+                      "iconPath": "",
+                      "description": "",
+                      "selectedNote": "",
+                      "descriptionItems": []
+                    },
+                    {
+                      "key": "opt-facc",
+                      "label": "FACC",
+                      "iconPath": "",
+                      "description": "",
+                      "selectedNote": "",
+                      "descriptionItems": []
+                    },
+                    {
+                      "key": "opt-faap",
+                      "label": "FAAP",
+                      "iconPath": "",
+                      "description": "",
+                      "selectedNote": "",
+                      "descriptionItems": []
+                    },
+                    {
+                      "key": "opt-dpm",
+                      "label": "DPM",
+                      "iconPath": "",
+                      "description": "",
+                      "selectedNote": "",
+                      "descriptionItems": []
+                    },
+                    {
+                      "key": "opt-dds",
+                      "label": "DDS",
+                      "iconPath": "",
+                      "description": "",
+                      "selectedNote": "",
+                      "descriptionItems": []
+                    },
+                    {
+                      "key": "opt-phd",
+                      "label": "PhD",
+                      "iconPath": "",
+                      "description": "",
+                      "selectedNote": "",
+                      "descriptionItems": []
+                    }
+                  ],
+                  "columns": [],
+                  "nestedFields": [],
+                  "metadata": {
+                    "multiple": true
+                  }
+                },
+                {
+                  "key": "ee6ce8cd-88a9-47de-b8bb-cbbed641866c",
+                  "type": "select",
+                  "label": "Specialty",
+                  "required": false,
+                  "hint": "",
+                  "description": "",
+                  "prefixIcon": "",
+                  "suffixIcon": "",
+                  "hintIcon": "",
+                  "conditions": [],
+                  "order": 5,
+                  "placeholder": "Select value",
+                  "pattern": "",
+                  "layout": {
+                    "col": 6
+                  },
+                  "title": "",
+                  "subtitle": "",
+                  "badgeText": "",
+                  "emptyCtaTitle": "",
+                  "addButtonLabel": "",
+                  "removeButtonLabel": "",
+                  "items": [],
+                  "options": [
+                    {
+                      "key": "opt-allergy-immunology",
+                      "label": "Allergy & Immunology",
+                      "iconPath": "",
+                      "description": "",
+                      "selectedNote": "",
+                      "descriptionItems": []
+                    },
+                    {
+                      "key": "opt-cardiology",
+                      "label": "Cardiology",
+                      "iconPath": "",
+                      "description": "",
+                      "selectedNote": "",
+                      "descriptionItems": []
+                    },
+                    {
+                      "key": "opt-dermatology",
+                      "label": "Dermatology",
+                      "iconPath": "",
+                      "description": "",
+                      "selectedNote": "",
+                      "descriptionItems": []
+                    },
+                    {
+                      "key": "opt-endocrinology",
+                      "label": "Endocrinology",
+                      "iconPath": "",
+                      "description": "",
+                      "selectedNote": "",
+                      "descriptionItems": []
+                    },
+                    {
+                      "key": "opt-gastroenterology",
+                      "label": "Gastroenterology",
+                      "iconPath": "",
+                      "description": "",
+                      "selectedNote": "",
+                      "descriptionItems": []
+                    },
+                    {
+                      "key": "opt-hematology-oncology",
+                      "label": "Hematology/Oncology",
+                      "iconPath": "",
+                      "description": "",
+                      "selectedNote": "",
+                      "descriptionItems": []
+                    },
+                    {
+                      "key": "opt-hospitalist",
+                      "label": "Hospitalist",
+                      "iconPath": "",
+                      "description": "",
+                      "selectedNote": "",
+                      "descriptionItems": []
+                    },
+                    {
+                      "key": "opt-infectious-disease",
+                      "label": "Infectious Disease",
+                      "iconPath": "",
+                      "description": "",
+                      "selectedNote": "",
+                      "descriptionItems": []
+                    },
+                    {
+                      "key": "opt-internal-medicine",
+                      "label": "Internal Medicine",
+                      "iconPath": "",
+                      "description": "",
+                      "selectedNote": "",
+                      "descriptionItems": []
+                    },
+                    {
+                      "key": "opt-nephrology",
+                      "label": "Nephrology",
+                      "iconPath": "",
+                      "description": "",
+                      "selectedNote": "",
+                      "descriptionItems": []
+                    },
+                    {
+                      "key": "opt-neurology",
+                      "label": "Neurology",
+                      "iconPath": "",
+                      "description": "",
+                      "selectedNote": "",
+                      "descriptionItems": []
+                    },
+                    {
+                      "key": "opt-oncology",
+                      "label": "Oncology",
+                      "iconPath": "",
+                      "description": "",
+                      "selectedNote": "",
+                      "descriptionItems": []
+                    },
+                    {
+                      "key": "opt-pulmonology",
+                      "label": "Pulmonology",
+                      "iconPath": "",
+                      "description": "",
+                      "selectedNote": "",
+                      "descriptionItems": []
+                    },
+                    {
+                      "key": "opt-rheumatology",
+                      "label": "Rheumatology",
+                      "iconPath": "",
+                      "description": "",
+                      "selectedNote": "",
+                      "descriptionItems": []
+                    }
+                  ],
                   "columns": [],
                   "nestedFields": []
                 },
@@ -2606,7 +2863,7 @@ window.INTAKE_FORM_SCHEMA = {
                   "suffixIcon": "",
                   "hintIcon": "",
                   "conditions": [],
-                  "order": 5,
+                  "order": 6,
                   "placeholder": "",
                   "layout": {
                     "col": 12
@@ -2746,7 +3003,7 @@ window.INTAKE_FORM_SCHEMA = {
                   "suffixIcon": "",
                   "hintIcon": "",
                   "conditions": [],
-                  "order": 6,
+                  "order": 7,
                   "placeholder": "Enter value",
                   "pattern": "",
                   "layout": {
@@ -2775,7 +3032,7 @@ window.INTAKE_FORM_SCHEMA = {
                   "suffixIcon": "",
                   "hintIcon": "",
                   "conditions": [],
-                  "order": 7,
+                  "order": 8,
                   "placeholder": "Enter value",
                   "pattern": "",
                   "layout": {
@@ -2804,7 +3061,7 @@ window.INTAKE_FORM_SCHEMA = {
                   "suffixIcon": "",
                   "hintIcon": "",
                   "conditions": [],
-                  "order": 8,
+                  "order": 9,
                   "placeholder": "Enter value",
                   "pattern": "email",
                   "layout": {
@@ -2832,7 +3089,7 @@ window.INTAKE_FORM_SCHEMA = {
                   "suffixIcon": "",
                   "hintIcon": "",
                   "conditions": [],
-                  "order": 9,
+                  "order": 10,
                   "placeholder": "",
                   "pattern": "",
                   "layout": {
@@ -2848,6 +3105,36 @@ window.INTAKE_FORM_SCHEMA = {
                   "options": [],
                   "columns": [],
                   "nestedFields": []
+                },
+                {
+                  "key": "d2a5b8c3-6e17-4f92-8b34-1c9d0e7a2f68",
+                  "type": "textarea",
+                  "label": "Notes",
+                  "required": false,
+                  "hint": "",
+                  "description": "",
+                  "prefixIcon": "",
+                  "suffixIcon": "",
+                  "hintIcon": "",
+                  "conditions": [],
+                  "order": 11,
+                  "placeholder": "Optional note…",
+                  "pattern": "",
+                  "layout": {
+                    "col": 12
+                  },
+                  "title": "",
+                  "subtitle": "",
+                  "badgeText": "",
+                  "emptyCtaTitle": "",
+                  "addButtonLabel": "",
+                  "removeButtonLabel": "",
+                  "items": [],
+                  "options": [],
+                  "columns": [],
+                  "nestedFields": [],
+                  "rows": 3,
+                  "maxLength": 250
                 }
               ],
               "subsections": []
@@ -3460,6 +3747,34 @@ window.INTAKE_FORM_SCHEMA = {
                   "nestedFields": []
                 },
                 {
+                  "key": "e3b6c9d4-7f28-4a03-9c45-2d0e1f8b3a79",
+                  "type": "text",
+                  "label": "NADEAN",
+                  "required": false,
+                  "hint": "",
+                  "description": "",
+                  "prefixIcon": "",
+                  "suffixIcon": "",
+                  "hintIcon": "",
+                  "conditions": [],
+                  "order": 9,
+                  "placeholder": "Enter value",
+                  "pattern": "",
+                  "layout": {
+                    "col": 6
+                  },
+                  "title": "",
+                  "subtitle": "",
+                  "badgeText": "",
+                  "emptyCtaTitle": "",
+                  "addButtonLabel": "",
+                  "removeButtonLabel": "",
+                  "items": [],
+                  "options": [],
+                  "columns": [],
+                  "nestedFields": []
+                },
+                {
                   "key": "262b93cb-e8d3-4d86-ad2c-ff9835c57a25",
                   "type": "date",
                   "label": "License Last Verified Date",
@@ -3470,13 +3785,97 @@ window.INTAKE_FORM_SCHEMA = {
                   "suffixIcon": "",
                   "hintIcon": "",
                   "conditions": [],
-                  "order": 9,
+                  "order": 10,
                   "placeholder": "",
                   "format": "DD/MM/YYYY",
                   "showAgeBadge": false,
                   "maxYears": null,
                   "disablePastDates": false,
                   "disableFutureDates": false,
+                  "layout": {
+                    "col": 6
+                  },
+                  "title": "",
+                  "subtitle": "",
+                  "badgeText": "",
+                  "emptyCtaTitle": "",
+                  "addButtonLabel": "",
+                  "removeButtonLabel": "",
+                  "items": [],
+                  "options": [],
+                  "columns": [],
+                  "nestedFields": []
+                },
+                {
+                  "key": "f4c7d0e5-8a39-4b14-8d56-3e1f2a9c4b80",
+                  "type": "text",
+                  "label": "License Last Verified By",
+                  "required": false,
+                  "hint": "",
+                  "description": "",
+                  "prefixIcon": "",
+                  "suffixIcon": "",
+                  "hintIcon": "",
+                  "conditions": [],
+                  "order": 11,
+                  "placeholder": "Enter value",
+                  "pattern": "",
+                  "layout": {
+                    "col": 6
+                  },
+                  "title": "",
+                  "subtitle": "",
+                  "badgeText": "",
+                  "emptyCtaTitle": "",
+                  "addButtonLabel": "",
+                  "removeButtonLabel": "",
+                  "items": [],
+                  "options": [],
+                  "columns": [],
+                  "nestedFields": []
+                },
+                {
+                  "key": "a5d8e1f6-9b40-4c25-9e67-4f2a3b0d5c91",
+                  "type": "date",
+                  "label": "License Next Verified",
+                  "required": false,
+                  "hint": "",
+                  "description": "",
+                  "prefixIcon": "",
+                  "suffixIcon": "",
+                  "hintIcon": "",
+                  "conditions": [],
+                  "order": 12,
+                  "placeholder": "Enter value",
+                  "pattern": "",
+                  "layout": {
+                    "col": 6
+                  },
+                  "title": "",
+                  "subtitle": "",
+                  "badgeText": "",
+                  "emptyCtaTitle": "",
+                  "addButtonLabel": "",
+                  "removeButtonLabel": "",
+                  "items": [],
+                  "options": [],
+                  "columns": [],
+                  "nestedFields": []
+                },
+                {
+                  "key": "b6e9f2a7-0c51-4d36-8f78-5a3b4c1e6d02",
+                  "type": "text",
+                  "label": "License Next Verified By",
+                  "required": false,
+                  "hint": "",
+                  "description": "",
+                  "prefixIcon": "",
+                  "suffixIcon": "",
+                  "hintIcon": "",
+                  "conditions": [],
+                  "order": 13,
+                  "placeholder": "Enter value",
+                  "pattern": "",
                   "layout": {
                     "col": 6
                   },

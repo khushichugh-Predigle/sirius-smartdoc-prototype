@@ -28,6 +28,8 @@
   const ext = doc.extracted_data[0];
 
   const state = {
+    providerMatchListExpanded: true,
+    providerSearchQuery: '',
     activeSectionIndex: 0,
     collapsed: {},               // subsection id -> bool (collapsed)
     evidenceOpenKey: null,
@@ -38,6 +40,14 @@
     // collapsed summary row already names. Expand only shows on request.
     matchExpanded: false,
     matchSelectedId: 'm1',
+    // Provider matching is a separate decision from patient matching — these
+    // were one shared pair before, so picking a provider silently rewrote the
+    // patient selection.
+    providerMatchExpanded: false,
+    providerMatchSelectedId: null,
+    providers: [],                // ranked provider instances (see initProviders)
+    providerDragUid: null,
+    careTeamLoadedFor: null,      // MATCH_CANDIDATES id whose care team is already loaded
     attachMode: null,             // null | 'existing' | 'new'
     attachedCase: null,
     sidePanelOpen: false,
@@ -123,7 +133,8 @@
   };
   const PRESCRIBER_MAP = {
     'first name': 'provider_first_name', 'last name': 'provider_last_name',
-    'speciality': 'specialty', 'telephone': 'provider_phone', 'fax': 'fax', 'email': 'email',
+    'specialty': 'specialty', 'prof. designation': 'prof_designation',
+    'telephone': 'provider_phone', 'fax': 'fax', 'email': 'email',
   };
   const ORG_MAP = {
     'organization name': 'organization_name', 'address': 'address', 'zip': 'zip',
@@ -165,6 +176,10 @@
     sub.fields.forEach((f) => {
       const resolved = resolveValue(ctx, f);
       f._key = sub._id + '__' + f.key;
+      // Pristine extracted value, kept separate from _value (which folds in
+      // the reviewer's overrides) so "Use extracted:" can always get back to
+      // what the document actually said. See providerFieldSourceRow().
+      f._extracted = resolved ? resolved.value : '';
       f._value = state.fieldOverrides[f._key] !== undefined ? state.fieldOverrides[f._key] : (resolved ? resolved.value : '');
       if (resolved) {
         f._confidence = resolved.confidence_score;
@@ -182,6 +197,127 @@
     sec.fields.forEach((f) => { f._key = 'top__' + f.key; f._value = ''; });
     (sec.subsections || []).forEach((sub) => annotateSubsection(sub, ctx));
   });
+
+  /* ================= Provider instances =================
+   * The schema already declares this section as a repeating list — see the
+   * "Provider " subsection's repeat block:
+   *   { source:'providers', serialField:<Seq #>, dedupeBy:<NPI>, collapseAfterFirst:true }
+   * Nothing read it before; this does. Ordering follows the same product rule
+   * the real app documents: the extracted provider leads at #1, the patient's
+   * existing care team follows by rank. */
+  const PROVIDER_SECTION = SCHEMA.sections.find((s) => s.title === 'M.D./Providers');
+  const PROVIDER_TEMPLATE = PROVIDER_SECTION.subsections[0];
+  const PROVIDER_REPEAT = PROVIDER_TEMPLATE.repeat || {};
+  const SEQ_FIELD_KEY = PROVIDER_REPEAT.serialField;
+  const NPI_FIELD_KEY = PROVIDER_REPEAT.dedupeBy;
+
+  /* prescriber database — the fixture from PrescriberIntake-Scenario-
+   * Modelling.xlsx, so the four modelled scenarios can be walked end to end. */
+  const CPR_PRESCRIBERS = [
+    { id: 'Pr1', first_name: 'John', last_name: 'Blaine', specialty: 'Oncology', organization: 'Jerky Pediatrics', address: '123 Dull Ave', city: 'Troy', state: 'MI', zip: '48083', npi: '1730123456', phone: '(586) 555-0101', prof_designation: 'MD' },
+    { id: 'Pr2', first_name: 'Mary', last_name: 'Costa', specialty: 'Gastro', organization: 'Holy Hospitals', address: '234 Mill Rd', city: 'Warren', state: 'MI', zip: '48091', npi: '1922334455', phone: '(586) 555-0202', prof_designation: 'MD' },
+    { id: 'Pr3', first_name: 'Abdu', last_name: 'Mohammed', specialty: 'Internal Medicine', organization: 'Piedmont Physicians', address: '456 Stake St', city: 'Warren', state: 'MI', zip: '48088', npi: '1811223344', phone: '(586) 555-0303', prof_designation: 'MD' },
+    { id: 'Pr4', first_name: 'A.', last_name: 'Mohammed', specialty: 'Hospitalist', organization: 'St. John Hospital', address: '456 Ryan Rd', city: 'Detroit', state: 'MI', zip: '48235', npi: '1647382910', phone: '(313) 555-0404', prof_designation: 'MD' }
+  ];
+
+  // Provider-card field label -> CPR record key. Used both to seed a card from
+  // a CPR record and to diff extracted values against it.
+  const PROVIDER_RECORD_MAP = {
+    'first name': 'first_name', 'last name': 'last_name', 'specialty': 'specialty',
+    'prof. designation': 'prof_designation', 'telephone': 'phone', 'fax': 'fax', 'email': 'email',
+    'organization name': 'organization', 'address': 'address', 'city': 'city',
+    'state': 'state', 'zip': 'zip', 'npi': 'npi',
+  };
+
+  /* Deep-clones a subsection template, re-id'ing it AND its children. The
+   * existing Add Drug clone doesn't recurse (Drug has no children) and doesn't
+   * clear extraction metadata — both would break here, because "Provider " has
+   * four child subsections and every clone would otherwise collide on _id/_key
+   * and inherit the template's confidence badges. */
+  function cloneSubsectionDeep(template, values) {
+    const clone = JSON.parse(JSON.stringify(template));
+    (function reid(sub) {
+      sub._id = 'subP' + (subsectionSeq++);
+      sub.fields.forEach((f) => {
+        f._key = sub._id + '__' + f.key;
+        const mapped = PROVIDER_RECORD_MAP[f.label.trim().toLowerCase()];
+        const seeded = values && mapped ? (values[mapped] || '') : '';
+        f._value = seeded;
+        f._extracted = '';
+        // A seeded card comes from CPR, not from the document — it must not
+        // inherit the template's confidence % or Evidence badge.
+        delete f._confidence;
+        delete f._evidence;
+      });
+      (sub.subsections || []).forEach(reid);
+    })(clone);
+    return clone;
+  }
+
+  function providerFields(p) {
+    const out = [];
+    (function walk(sub) {
+      sub.fields.forEach((f) => out.push(f));
+      (sub.subsections || []).forEach(walk);
+    })(p.sub);
+    return out;
+  }
+
+  function providerFieldByLabel(p, label) {
+    const want = label.trim().toLowerCase();
+    return providerFields(p).find((f) => f.label.trim().toLowerCase() === want) || null;
+  }
+
+  function providerValue(p, label) {
+    const f = providerFieldByLabel(p, label);
+    if (!f) return '';
+    const o = state.fieldOverrides[f._key];
+    return (o !== undefined ? o : f._value) || '';
+  }
+
+  function providerName(p) {
+    const n = `${providerValue(p, 'First Name')} ${providerValue(p, 'Last Name')}`.trim();
+    return n || 'Unnamed provider';
+  }
+
+  // Contiguous 1..n after every add / remove / reorder. The Excel's Pat3
+  // fixture has a "#2" with no "#1", and Scenario 4 shows it landing at #1 —
+  // normalising reproduces that without a special case.
+  function renumberProviders() {
+    state.providers.forEach((p, i) => {
+      const f = providerFields(p).find((x) => x.key === SEQ_FIELD_KEY);
+      if (f) state.fieldOverrides[f._key] = String(i + 1);
+    });
+  }
+
+  function makeProvider(origin, values, cprId) {
+    return {
+      uid: 'pv' + (providerSeq++),
+      sub: cloneSubsectionDeep(PROVIDER_TEMPLATE, values),
+      origin: origin,          // 'extracted' | 'cpr' | 'draft'
+      cprId: cprId || null,
+      record: values || null,  // the CPR values, for the extracted-vs-CPR diff
+      edited: false,
+    };
+  }
+
+  let providerSeq = 0;
+
+  // Instance #1 is the extracted prescriber: the schema's own already-annotated
+  // subsection, so it keeps its extracted values, confidence and Evidence badges.
+  function initProviders() {
+    const extracted = {
+      uid: 'pv' + (providerSeq++),
+      sub: PROVIDER_TEMPLATE,
+      origin: 'extracted',
+      cprId: null,
+      record: null,
+      edited: false,
+    };
+    state.providers = [extracted];
+    renumberProviders();
+    syncPrescribedProvider();
+  }
 
   /* ---------- Left rail ---------- */
   function renderLeftRail() {
@@ -224,6 +360,7 @@
     renderReadOnlyBanner(cs);
     document.getElementById('rejectOpenBtn').disabled = cs.isReadOnly;
     document.getElementById('saveSubmitBtn').disabled = cs.isReadOnly;
+    document.getElementById('saveDraftBtn').disabled = cs.isReadOnly;
     document.getElementById('addDrugBtn').disabled = cs.isReadOnly;
     renderAttachCard();
   }
@@ -439,8 +576,8 @@
 
   /* ---------- Match accordion (patient/provider entity match) ---------- */
   const MATCH_CANDIDATES = [
-    { id: 'm1', name: doc ? (ext.patient_information.patient_first_name.value + ' ' + ext.patient_information.patient_last_name.value) : 'Patient', meta: 'DOB ' + (ext.patient_information.dob.value || '-') + ' · MRN HC10012', status: 'active', cprReferralSourceId: 'ct-001' },
-    { id: 'm2', name: ext.patient_information.patient_last_name.value || 'Patient', meta: 'DOB 04/12/1968 · MRN HC10098', status: 'inactive', cprReferralSourceId: null },
+    { id: 'm1', name: doc ? (ext.patient_information.patient_first_name.value + ' ' + ext.patient_information.patient_last_name.value) : 'Patient', meta: 'DOB ' + (ext.patient_information.dob.value || '-') + ' · MRN HC10012', status: 'active', cprReferralSourceId: 'ct-001', careTeam: ['Pr3', 'Pr2'] },
+    { id: 'm2', name: ext.patient_information.patient_last_name.value || 'Patient', meta: 'DOB 04/12/1968 · MRN HC10098', status: 'inactive', cprReferralSourceId: null, careTeam: ['Pr1'] },
   ];
 
   function activeSectionUsesMatch() {
@@ -448,13 +585,145 @@
     return sec.title === 'Patient Demographics' || sec.title === 'M.D./Providers';
   }
 
+  /* prescriber lookup for the extracted prescriber (§6/§7). Fuzzy on
+   * name / organization / specialty / address, since NPI is absent from most
+   * real extractions — the sample document carries provider_npi: null — so an
+   * NPI-keyed match usually can't fire and the user has to decide. */
+  function norm(s) { return (s || '').toString().trim().toLowerCase(); }
+
+  function providerMatchScore(rec) {
+    const p = state.providers[0];
+    if (!p) return 0;
+    let score = 0;
+    if (norm(rec.last_name) && norm(rec.last_name) === norm(providerValue(p, 'Last Name'))) score += 40;
+    if (norm(rec.first_name) && norm(rec.first_name) === norm(providerValue(p, 'First Name'))) score += 20;
+    const npi = norm(providerValue(p, 'NPI'));
+    if (npi && norm(rec.npi) === npi) score += 40;
+    const org = norm(providerValue(p, 'Organization Name'));
+    if (org && norm(rec.organization).includes(org.split(' ')[0])) score += 10;
+    const spec = norm(providerValue(p, 'Specialty'));
+    if (spec && (norm(rec.specialty).startsWith(spec.slice(0, 6)) || spec.startsWith(norm(rec.specialty).slice(0, 6)))) score += 10;
+    // Fuzzy address: compare digits only, so "456 Stake Steet" still matches
+    // "456 Stake St" (Excel Scenario 2's deliberate typo).
+    const a = (providerValue(p, 'Address').match(/\d+/) || [])[0];
+    const b = (rec.address.match(/\d+/) || [])[0];
+    if (a && a === b) score += 15;
+    return score;
+  }
+
+  function providerCandidates() {
+    return CPR_PRESCRIBERS
+      .map((rec) => ({ rec, score: providerMatchScore(rec) }))
+      .filter((x) => x.score >= 40)
+      .sort((a, b) => b.score - a.score);
+  }
+
+  // Is this CPR prescriber already one of the patient's linked providers?
+  function providerAlreadyLinked(cprId) {
+    return state.providers.some((p) => p.cprId === cprId);
+  }
+
+  function renderProviderMatchAccordion(wrap) {
+    const cands = providerCandidates();
+    const selected = state.providerMatchSelectedId
+      ? CPR_PRESCRIBERS.find((r) => r.id === state.providerMatchSelectedId)
+      : null;
+    const extractedName = state.providers[0] ? providerName(state.providers[0]) : 'prescriber';
+    const headerInner = selected
+      ? `<span class="match-selected-summary"><span class="match-selected-main"><span class="match-selected-name">${escapeHtml(selected.first_name + ' ' + selected.last_name)}</span><span class="match-selected-meta">${escapeHtml(selected.specialty + ' · NPI ' + selected.npi + ' · ' + selected.organization)}</span></span></span>`
+      : `<span class="match-tt"><span class="match-t1">${cands.length ? `${cands.length} match${cands.length === 1 ? '' : 'es'} found` : 'No record found'}</span><span class="match-t2">${cands.length ? `Confirm which record “${escapeHtml(extractedName)}” refers to.` : `“${escapeHtml(extractedName)}” isn’t on record — create a new prescriber record.`}</span></span>`;
+
+    wrap.innerHTML = `
+      <div class="match-accordion${state.providerMatchExpanded ? ' open' : ''}">
+        <button type="button" class="match-head" id="matchToggleBtn">
+          <span class="match-ico${selected ? ' sel' : ''}">✓</span>
+          ${headerInner}
+          <span class="match-chevron"></span>
+        </button>
+        <div class="match-content" style="${state.providerMatchExpanded ? '' : 'display:none'}">
+          <div class="match-radios">
+            ${cands.map(({ rec }) => `
+              <label class="match-radio${state.providerMatchSelectedId === rec.id ? ' sel' : ''}">
+                <input type="radio" name="providerMatchChoice" ${state.providerMatchSelectedId === rec.id ? 'checked' : ''} data-id="${rec.id}">
+                <span class="match-radio-main">
+                  <span class="match-radio-name">${escapeHtml(rec.first_name + ' ' + rec.last_name)}</span>
+                  <span class="match-radio-meta">${escapeHtml(rec.specialty)} · NPI ${escapeHtml(rec.npi)} · ${escapeHtml(rec.organization)} · ${escapeHtml(rec.address + ', ' + rec.city + ' ' + rec.state)}</span>
+                </span>
+                ${providerAlreadyLinked(rec.id) ? '<span class="match-status-badge match-status-pending">On this patient</span>' : '<span class="match-status-badge match-status-active">On record</span>'}
+              </label>`).join('')}
+            <label class="match-radio create-new${state.providerMatchSelectedId === 'new' ? ' sel' : ''}">
+              <input type="radio" name="providerMatchChoice" ${state.providerMatchSelectedId === 'new' ? 'checked' : ''} data-id="new">
+              <span class="match-radio-main"><span class="match-radio-name">Create a new prescriber record</span></span>
+            </label>
+          </div>
+        </div>
+      </div>`;
+
+    document.getElementById('matchToggleBtn').addEventListener('click', () => {
+      state.providerMatchExpanded = !state.providerMatchExpanded;
+      renderMatchAccordion();
+    });
+    wrap.querySelectorAll('input[name="providerMatchChoice"]').forEach((r) => {
+      r.addEventListener('change', (e) => selectProviderMatch(e.target.dataset.id));
+    });
+  }
+
+  function selectProviderMatch(id) {
+    state.providerMatchSelectedId = id;
+    state.providerMatchExpanded = false;
+    if (id === 'new') {
+      // Excel Scenario 1/3: create from the extracted values. The card stays a
+      // draft until Save & Submit, but is a peer row immediately so it can be
+      // ranked (Scenario 3 demotes it to #2 before it exists in CPR).
+      const p = state.providers[0];
+      if (p) { p.origin = 'draft'; p.cprId = null; }
+      renderForm();
+      toast('New prescriber will be created on Save & Submit');
+      return;
+    }
+    const rec = CPR_PRESCRIBERS.find((r) => r.id === id);
+    if (!rec) return;
+    const existing = state.providers.find((p) => p.cprId === id);
+    if (existing) {
+      // Excel Scenario 2 — dedupe rather than adding a second card, keep the
+      // existing rank, and say so explicitly.
+      state.providers = state.providers.filter((p) => p.origin !== 'extracted');
+      renumberProviders();
+      renderForm();
+      syncPrescribedProvider();
+      toast('This prescriber is already assigned to this patient — no changes will be made');
+      return;
+    }
+    // Replace the extracted card in place, keeping rank #1, and remember the
+    // extracted values so per-field "Use extracted:" still works.
+    const idx = state.providers.findIndex((p) => p.origin === 'extracted');
+    const extractedValues = {};
+    if (idx >= 0) {
+      providerFields(state.providers[idx]).forEach((f) => {
+        const mapped = PROVIDER_RECORD_MAP[f.label.trim().toLowerCase()];
+        if (mapped) extractedValues[mapped] = (state.fieldOverrides[f._key] !== undefined ? state.fieldOverrides[f._key] : f._value) || '';
+      });
+    }
+    const p = makeProvider('cpr', rec, rec.id);
+    providerFields(p).forEach((f) => {
+      const mapped = PROVIDER_RECORD_MAP[f.label.trim().toLowerCase()];
+      if (mapped && extractedValues[mapped]) f._extracted = extractedValues[mapped];
+    });
+    if (idx >= 0) state.providers.splice(idx, 1, p); else state.providers.unshift(p);
+    renumberProviders();
+    renderForm();
+    syncPrescribedProvider();
+    toast(`Linked to ${rec.first_name} ${rec.last_name} — differing values offer “Use extracted”`);
+  }
+
   function renderMatchAccordion() {
     const wrap = document.getElementById('matchRegion');
     if (!activeSectionUsesMatch()) { wrap.style.display = 'none'; return; }
     wrap.style.display = 'block';
     const isPatient = SCHEMA.sections[state.activeSectionIndex].title === 'Patient Demographics';
-    const title = isPatient ? 'Patient match found' : 'Provider match found';
-    const subtitle = isPatient ? 'Review and confirm the matching patient record.' : 'Review and confirm the matching provider record.';
+    if (!isPatient) { wrap.style.display = 'none'; return; }
+    const title = 'Patient match found';
+    const subtitle = 'Review and confirm the matching patient record.';
     const selected = MATCH_CANDIDATES.find((c) => c.id === state.matchSelectedId);
     const headerInner = selected
       ? `<span class="match-selected-summary"><span class="match-selected-main"><span class="match-selected-name">${escapeHtml(selected.name)}</span><span class="match-selected-meta">${escapeHtml(selected.meta)}</span></span></span>`
@@ -477,7 +746,7 @@
               </label>`).join('')}
             <label class="match-radio create-new${state.matchSelectedId === 'new' ? ' sel' : ''}">
               <input type="radio" name="matchChoice" ${state.matchSelectedId === 'new' ? 'checked' : ''} data-id="new">
-              <span class="match-radio-main"><span class="match-radio-name">Create a new ${isPatient ? 'patient' : 'provider'} record</span></span>
+              <span class="match-radio-main"><span class="match-radio-name">Create a new patient record</span></span>
             </label>
           </div>
         </div>
@@ -491,16 +760,31 @@
         // just to confirm the match, not stay open and compete for attention.
         state.matchExpanded = false;
         // "Existing matching patient selected -> populate Referral Source from
-        // CPR+" (the user can still change it afterward — see field markup).
+        // records" (the user can still change it afterward — see field markup).
         const candidate = MATCH_CANDIDATES.find((c) => c.id === state.matchSelectedId);
         const refKey = findReferralSourceKey();
         if (candidate && candidate.cprReferralSourceId && refKey && state.fieldOverrides[refKey] === undefined) {
           state.fieldOverrides[refKey] = candidate.cprReferralSourceId;
-          toast('Referral Source populated from CPR+');
+          toast('Referral Source populated from record');
         }
+        loadCareTeamForPatient(candidate);
         renderForm();
       });
     });
+  }
+
+  // §8 — linking an existing patient pulls their primary providers below
+  // the extracted one, ranked. Only runs once per patient pick (guarded by
+  // careTeamLoadedFor) so it doesn't clobber ranks the user already changed.
+  function loadCareTeamForPatient(candidate) {
+    if (!candidate || !candidate.careTeam || state.careTeamLoadedFor === candidate.id) return;
+    state.careTeamLoadedFor = candidate.id;
+    candidate.careTeam.forEach((cprId) => {
+      if (providerAlreadyLinked(cprId)) return;
+      const rec = CPR_PRESCRIBERS.find((r) => r.id === cprId);
+      if (rec) addProviderFromRecord(rec, 'cpr', rec.id);
+    });
+    syncPrescribedProvider();
   }
 
   /* ---------- Dynamic form ---------- */
@@ -541,6 +825,17 @@
             </button>`}
           </div>`;
         }
+        // §14 — metadata.optionsFrom.source='providers': build options from
+        // the ranked provider list so the Prescribed Provider dropdown in Drug
+        // Orders always reflects the current care team. Default to Seq #1.
+        if (field.metadata && field.metadata.optionsFrom && field.metadata.optionsFrom.source === 'providers') {
+          const provOpts = state.providers.map((p) => {
+            const name = providerName(p);
+            return { label: name, value: name };
+          });
+          const effVal = val || (provOpts[0] ? provOpts[0].value : '');
+          return `<div class="field-select" data-key="${field._key}" data-value="${escapeHtml(effVal)}" data-options='${escapeHtml(JSON.stringify(provOpts))}' data-disabled="${disabled ? '1' : ''}"></div>`;
+        }
         let opts = (field.options || []).map((o) => ({ label: o.label, value: o.label }));
         if (val && !opts.some((o) => o.label === val)) opts = [{ label: val, value: val }].concat(opts);
         return `<div class="field-select" data-key="${field._key}" data-value="${escapeHtml(val)}" data-options='${escapeHtml(JSON.stringify(opts))}' data-disabled="${disabled ? '1' : ''}"></div>`;
@@ -571,6 +866,35 @@
     }
   }
 
+  /* "Use extracted: X" — the affordance §9 asks for, matching the real app's
+   * pm-src-toggle. Opt-in by design: the CPR value stays the default, which is
+   * what Excel Scenario 2 ("no changes will be made") requires even though the
+   * extracted values differ. The CSS for this already shipped in forms.css. */
+  function providerFieldSourceRow(field) {
+    const extracted = (field._extracted || '').toString().trim();
+    if (!extracted) return '';
+    const current = state.fieldOverrides[field._key];
+    const shown = ((current !== undefined ? current : field._value) || '').toString().trim();
+    if (shown.toLowerCase() === extracted.toLowerCase()) return '';
+    return `<div class="pm-src-row">
+      <button type="button" class="pm-src-toggle" data-use-extracted="${field._key}" title="Use the value extracted from the document">
+        <span class="pm-src-use">Use extracted:</span><span class="pm-src-val">${escapeHtml(extracted)}</span>
+      </button>
+    </div>`;
+  }
+
+  // Amber = differs from the record it was seeded from. Blue = reviewer edited it.
+  function fieldStateClass(field) {
+    const extracted = (field._extracted || '').toString().trim();
+    const override = state.fieldOverrides[field._key];
+    if (override !== undefined && String(override).trim() !== String(field._value || '').trim()) return ' pm-edited';
+    if (extracted) {
+      const shown = ((override !== undefined ? override : field._value) || '').toString().trim();
+      if (shown.toLowerCase() !== extracted.toLowerCase()) return ' pm-diff';
+    }
+    return '';
+  }
+
   function fieldMarkup(field) {
     const wide = field.type === 'textarea';
     // Checkbox fields render their own label text inline next to the box
@@ -578,7 +902,7 @@
     // field label above it too would just repeat the same text twice.
     const isCheckbox = field.type === 'checkbox';
     const showLabelRow = !isCheckbox || field.required || confidenceMarkup(field) || evidenceMarkup(field);
-    return `<div class="field${wide ? ' wide' : ''}">
+    return `<div class="field${wide ? ' wide' : ''}${fieldStateClass(field)}">
       ${showLabelRow ? `<label for="${field._key}">
         ${isCheckbox ? '' : `<span>${escapeHtml(field.label)}</span>`}
         ${field.required ? '<em>*</em>' : ''}
@@ -586,6 +910,7 @@
         ${evidenceMarkup(field)}
       </label>` : ''}
       ${fieldControlMarkup(field)}
+      ${providerFieldSourceRow(field)}
     </div>`;
   }
 
@@ -608,20 +933,117 @@
     </section>`;
   }
 
+  const PROVIDER_ORIGIN_BADGE = {
+    extracted: { cls: 'origin-extracted', text: 'Extracted' },
+    cpr: { cls: 'origin-cpr', text: 'From Record' },
+    draft: { cls: 'origin-draft', text: 'New — pending' },
+  };
+
+  /* One provider = the "Provider " subsection tree wrapped in a ranked card.
+   * Reuses subsectionMarkup for the body, so Prescriber / Organization /
+   * License Info / Contacts render exactly as before. */
+  function providerCardMarkup(p, index) {
+    const collapsed = !!state.collapsed[p.sub._id];
+    const badge = PROVIDER_ORIGIN_BADGE[p.origin];
+    const cs = getClaimState();
+    const locked = cs.isReadOnly && !cs.isGated;
+    const body = (p.sub.subsections || []).map((c) => subsectionMarkup(c, 1)).join('');
+    const sharedWarning = p.origin === 'cpr' && p.edited
+      ? `<div class="provider-shared-warning">Editing this prescriber updates the shared record for every patient linked to it.</div>`
+      : '';
+      
+    let matchHeader = '';
+    let matchBody = '';
+    let searchBtn = '';
+    
+    if (index === 0 && p.origin === 'extracted') {
+      const cands = providerCandidates();
+      const selectedId = state.providerMatchSelectedId;
+      const selected = selectedId ? (selectedId === 'new' ? 'new' : CPR_PRESCRIBERS.find((r) => r.id === selectedId)) : null;
+      
+      if (selected && selected !== 'new') {
+        matchHeader = `<span class="provider-match-subtitle">${escapeHtml(selected.first_name + ' ' + selected.last_name + ' · ' + selected.specialty + ' · ' + selected.organization)}</span>`;
+      } else if (selected === 'new') {
+        matchHeader = `<span class="provider-match-subtitle" style="color:var(--text-secondary)">New prescriber record</span>`;
+      } else {
+        const cLen = cands.length;
+        const msg = cLen === 0 ? 'No record found' : (cLen === 1 ? '1 match found — confirm below' : cLen + ' matches found — select one');
+        matchHeader = `<span class="provider-match-subtitle" style="color:var(--brand);font-weight:600">${msg}</span>`;
+      }
+
+      if (state.providerMatchListExpanded) {
+        matchBody = `
+          <div class="provider-match-list">
+            <div class="match-radios provider-match-radios">
+              ${cands.map(({ rec }) => `
+                <label class="match-radio${state.providerMatchSelectedId === rec.id ? ' sel' : ''}">
+                  <input type="radio" name="providerMatchChoice" ${state.providerMatchSelectedId === rec.id ? 'checked' : ''} data-id="${rec.id}">
+                  <span class="match-radio-main">
+                    <span class="match-radio-name">${escapeHtml(rec.first_name + ' ' + rec.last_name)}</span>
+                    <span class="match-radio-meta">${escapeHtml(rec.specialty)} · NPI ${escapeHtml(rec.npi)} · ${escapeHtml(rec.organization)} · ${escapeHtml(rec.address + ', ' + rec.city + ' ' + rec.state)}</span>
+                  </span>
+                  ${providerAlreadyLinked(rec.id) ? '<span class="match-status-badge match-status-pending">On this patient</span>' : '<span class="match-status-badge match-status-active">On record</span>'}
+                </label>`).join('')}
+              <label class="match-radio create-new${state.providerMatchSelectedId === 'new' ? ' sel' : ''}">
+                <input type="radio" name="providerMatchChoice" ${state.providerMatchSelectedId === 'new' ? 'checked' : ''} data-id="new">
+                <span class="match-radio-main">
+                  <span class="match-radio-name">+ Create a new prescriber record</span>
+                </span>
+              </label>
+            </div>
+          </div>`;
+      } else {
+        matchBody = `<div style="padding: 12px 16px; border-bottom: 1px solid #eaecf0; font-size: 13px;"><a href="#" class="provider-match-change-btn">Change match</a></div>`;
+      }
+
+      searchBtn = `<button type="button" class="provider-search-btn" data-provider-search="${p.uid}" title="Search provider directory" ${locked ? 'disabled' : ''}>
+        <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="6.5" stroke="currentColor" stroke-width="1.5"/><path d="M17 17l-3.2-3.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>`;
+    }
+
+    return `<section class="provider-card${collapsed ? ' collapsed' : ''}" data-provider-uid="${p.uid}" draggable="${locked ? 'false' : 'true'}">
+      <div class="provider-card-head" data-provider-toggle="${p.uid}">
+        <span class="provider-drag" title="Drag to reorder" aria-hidden="true"></span>
+        <span class="provider-seq">#${index + 1}</span>
+        <div style="display:flex; flex-direction:column; margin-right:auto; gap:2px;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span class="provider-card-title">${escapeHtml(providerName(p))}</span>
+            <span class="provider-origin ${badge.cls}">${badge.text}</span>
+          </div>
+          ${matchHeader}
+        </div>
+        <span class="provider-card-actions">
+          ${searchBtn}
+          ${state.providers.length > 1 ? `<button type="button" class="provider-remove" data-provider-remove="${p.uid}" title="Unlink from this patient" ${locked ? 'disabled' : ''}>Unlink</button>` : ''}
+        </span>
+        <span class="subsection-chevron"></span>
+      </div>
+      <div class="provider-card-body">${matchBody}${sharedWarning}${body}</div>
+    </section>`;
+  }
+
   function renderForm() {
     const sec = SCHEMA.sections[state.activeSectionIndex];
     document.getElementById('formSectionTitle').textContent = sec.title;
     const isDrugSection = sec.title === 'Drug Orders';
+    const isProviderSection = sec.title === 'M.D./Providers';
     document.getElementById('addDrugBtn').style.display = isDrugSection ? 'inline-flex' : 'none';
+    document.getElementById('addProviderBtn').style.display = isProviderSection ? 'inline-flex' : 'none';
 
     const topFields = sec.fields.map(fieldMarkup).join('');
-    const subsectionsHtml = (sec.subsections || []).map((s) => subsectionMarkup(s, 0)).join('');
+    let subsectionsHtml;
+    if (isProviderSection) {
+      subsectionsHtml = state.providers.map(providerCardMarkup).join('');
+    } else {
+      subsectionsHtml = (sec.subsections || []).map((s) => subsectionMarkup(s, 0)).join('');
+    }
     const extraHtml = isDrugSection ? state.extraDrugSubsections.map((s) => subsectionMarkup(s, 0)).join('') : '';
     document.getElementById('dynamicForm').innerHTML = topFields + subsectionsHtml + extraHtml;
 
     document.getElementById('nextBtn').style.display = state.activeSectionIndex < SCHEMA.sections.length - 1 ? 'inline-flex' : 'none';
 
     wireFormEvents();
+    if (isProviderSection) wireProviderEvents();
     renderMatchAccordion();
   }
 
@@ -668,9 +1090,167 @@
     document.querySelectorAll('.referral-source-search-btn').forEach((btn) => {
       btn.addEventListener('click', (e) => { e.stopPropagation(); openReferralPopup(btn.dataset.key); });
     });
+    // Checkboxes had no override listener at all, so PECOS Enrolled lost its
+    // state on every re-render — and provider cards re-render constantly.
+    document.querySelectorAll('.dynamic-form input[type="checkbox"][data-key]').forEach((el) => {
+      el.addEventListener('change', (e) => { state.fieldOverrides[e.target.dataset.key] = e.target.checked; });
+    });
+    document.querySelectorAll('[data-use-extracted]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const key = btn.dataset.useExtracted;
+        const f = findFieldByKey(key);
+        if (!f) return;
+        state.fieldOverrides[key] = f._extracted;
+        markProviderEdited(key);
+        renderForm();
+      });
+    });
+  }
+
+  /* ---------- Provider card interactions ---------- */
+  function providerByUid(uid) { return state.providers.find((p) => p.uid === uid) || null; }
+
+  // A field edit on an "On file" card is a CPR update (Excel Scenario 4), so
+  // the card has to know it was touched.
+  function markProviderEdited(fieldKey) {
+    const p = state.providers.find((x) => providerFields(x).some((f) => f._key === fieldKey));
+    if (p && p.origin === 'cpr') p.edited = true;
+  }
+
+  function wireProviderEvents() {
+    document.querySelectorAll('[data-provider-toggle]').forEach((head) => {
+      head.addEventListener('click', (e) => {
+        if (e.target.closest('[data-provider-remove]') || e.target.closest('.provider-drag') || e.target.closest('[data-provider-search]')) return;
+        const p = providerByUid(head.dataset.providerToggle);
+        if (!p) return;
+        state.collapsed[p.sub._id] = !state.collapsed[p.sub._id];
+        renderForm();
+      });
+    });
+    
+    document.querySelectorAll('.provider-match-change-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        state.providerMatchListExpanded = true;
+        renderForm();
+      });
+    });
+    
+    document.querySelectorAll('.provider-match-radios input').forEach(r => {
+      r.addEventListener('change', (e) => {
+        state.providerMatchSelectedId = e.target.dataset.id;
+        state.providerMatchListExpanded = false;
+        selectProviderMatch(state.providerMatchSelectedId);
+      });
+    });
+    
+    document.querySelectorAll('[data-provider-search]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (btn.disabled) return;
+        openProviderSearch();
+      });
+    });
+    document.querySelectorAll('[data-provider-remove]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (btn.disabled) return;
+        removeProvider(btn.dataset.providerRemove);
+      });
+    });
+    // Drag to reorder — the ranking interaction §5 asks for, on top of the
+    // schema's own serialField (Seq #), which stays the source of truth.
+    document.querySelectorAll('.provider-card[draggable="true"]').forEach((card) => {
+      card.addEventListener('dragstart', (e) => {
+        state.providerDragUid = card.dataset.providerUid;
+        card.classList.add('dragging');
+        if (e.dataTransfer) e.dataTransfer.effectAllowed = 'move';
+      });
+      card.addEventListener('dragend', () => { state.providerDragUid = null; card.classList.remove('dragging'); });
+      card.addEventListener('dragover', (e) => { e.preventDefault(); card.classList.add('drag-over'); });
+      card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+      card.addEventListener('drop', (e) => {
+        e.preventDefault();
+        card.classList.remove('drag-over');
+        reorderProviders(state.providerDragUid, card.dataset.providerUid);
+      });
+    });
+  }
+
+  function reorderProviders(fromUid, toUid) {
+    if (!fromUid || !toUid || fromUid === toUid) return;
+    const from = state.providers.findIndex((p) => p.uid === fromUid);
+    const to = state.providers.findIndex((p) => p.uid === toUid);
+    if (from < 0 || to < 0) return;
+    const [moved] = state.providers.splice(from, 1);
+    state.providers.splice(to, 0, moved);
+    renumberProviders();
+    renderForm();
+    syncPrescribedProvider();
+    toast(`${providerName(moved)} moved to #${to + 1}`);
+  }
+
+  // Unlink from this patient — the shared CPR prescriber record itself is left
+  // alone so other patients keep it.
+  function removeProvider(uid) {
+    const p = providerByUid(uid);
+    if (!p || state.providers.length <= 1) return;
+    state.providers = state.providers.filter((x) => x.uid !== uid);
+    renumberProviders();
+    renderForm();
+    syncPrescribedProvider();
+    toast(p.origin === 'draft'
+      ? `${providerName(p)} discarded — was never created in records`
+      : `${providerName(p)} unlinked from this patient (still in records)`);
+  }
+
+  function addProviderFromRecord(record, origin, cprId) {
+    const p = makeProvider(origin, record, cprId);
+    // Honour collapseAfterFirst: true — any provider added beyond index 0
+    // starts collapsed so the care-team list doesn't expand into a wall of
+    // fields. The user clicks the header to expand any individual card.
+    if (state.providers.length > 0 && PROVIDER_REPEAT.collapseAfterFirst) {
+      state.collapsed[p.sub._id] = true;
+    }
+    state.providers.push(p);
+    renumberProviders();
+    return p;
+  }
+
+  /* §14 — keep the "Prescribed Provider" select in Drug Orders in sync with
+   * the ranked provider list. The field is identified by metadata.optionsFrom
+   * rather than by hard-coding the UUID, so it stays correct if the schema
+   * changes. Default is Seq #1; if the current value is no longer in the list
+   * (e.g. the #1 provider was removed or re-ranked), reset to the new #1. */
+  function prescribedProviderFieldKey() {
+    let key = null;
+    function scan(fields) {
+      (fields || []).forEach((f) => {
+        if (f.metadata && f.metadata.optionsFrom && f.metadata.optionsFrom.source === 'providers') key = f._key;
+      });
+    }
+    function walk(sub) { scan(sub.fields); (sub.subsections || []).forEach(walk); }
+    SCHEMA.sections.forEach((sec) => { scan(sec.fields); (sec.subsections || []).forEach(walk); });
+    return key;
+  }
+
+  function syncPrescribedProvider() {
+    const key = prescribedProviderFieldKey();
+    if (!key) return;
+    const options = state.providers.map((p) => providerName(p));
+    const current = state.fieldOverrides[key];
+    // If there's no valid selection yet, or the saved name is gone (re-rank /
+    // remove), default to whoever is now at #1.
+    if (!current || !options.includes(current)) {
+      state.fieldOverrides[key] = options[0] || '';
+    }
   }
 
   /* ---------- Referral Source lookup (typeahead + "+ Add new" -> popup) ---------- */
+
   const ADD_NEW_REFERRAL = '__add_new_referral__';
 
   function referralSourceName(contact) {
@@ -718,7 +1298,7 @@
    * referral-source), reusing the reclassify-modal shell (widened via
    * .wide) — see the Referral Source lookup's "+ Add new" entry point. ---------- */
   const ORG_TYPES = ['Doctor', 'Hospital', 'Ancillary Provider', 'Payer'];
-  // Real CPR+ site list (from the actual Site dropdown) — "Do Not Use" sites
+  // Real site list (from the actual Site dropdown) — "Do Not Use" sites
   // are kept verbatim since that's how they're labeled in the source system.
   const SITES = [
     'Do Not Use - Philadelphia - PA', 'Los Angeles - CA', 'New York - NY',
@@ -920,7 +1500,7 @@
    * (.contacts-field-grid) — see the identical layout in
    * modules/contacts/contacts.js (this is the same contact-management
    * micro-screen, reused here as a popup). Only field order/types were
-   * taken from the real CPR+ Contact/Notes screen. */
+   * taken from the real Contact/Notes screen. */
   function gridField(label, key, values, opts) {
     opts = opts || {};
     return `<div class="reclassify-field${opts.full ? ' full' : ''}">
@@ -1180,6 +1760,10 @@
     function walk(sub) { scan(sub.fields); (sub.subsections || []).forEach(walk); }
     SCHEMA.sections.forEach((sec) => { scan(sec.fields); (sec.subsections || []).forEach(walk); });
     state.extraDrugSubsections.forEach(walk);
+    // Also search provider instance fields — these live outside the main schema
+    // tree so the original walk would miss them, causing "Use extracted:" to
+    // silently do nothing on every provider card field.
+    state.providers.forEach((p) => walk(p.sub));
     return found;
   }
 
@@ -1293,7 +1877,7 @@
   }
   document.addEventListener('click', () => { closeFloating(); state.evidenceOpenKey = null; });
 
-  /* ---------- Add Drug ---------- */
+  /* ---------- Add Drug / Add Provider ---------- */
   document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('addDrugBtn').addEventListener('click', () => {
       const sec = SCHEMA.sections.find((s) => s.title === 'Drug Orders');
@@ -1304,6 +1888,18 @@
       clone.fields.forEach((f) => { f._key = clone._id + '__' + f.key; f._value = ''; });
       state.extraDrugSubsections.push(clone);
       renderForm();
+    });
+
+    document.getElementById('addProviderBtn').addEventListener('click', () => {
+      // Add a blank draft card at the end of the ranked list. The user fills
+      // in First Name / Last Name / Specialty manually. On Save & Submit the
+      // record will be created in records (origin === 'draft').
+      const p = addProviderFromRecord({}, 'draft', null);
+      // Expand the new card so it's ready to fill in.
+      state.collapsed[p.sub._id] = false;
+      syncPrescribedProvider();
+      renderForm();
+      toast('New prescriber card added — fill in details and Save & Submit to create in records');
     });
   });
 
@@ -1340,7 +1936,75 @@
     }
   }
 
-  function wireModals() {
+  
+  function openProviderSearch() {
+    state.providerSearchQuery = '';
+    renderProviderSearchModal();
+    document.getElementById('providerSearchOverlay').style.display = 'flex';
+  }
+
+  function renderProviderSearchModal() {
+    const q = (state.providerSearchQuery || '').toLowerCase();
+    const filtered = CPR_PRESCRIBERS.filter((r) => {
+      if (!q) return true;
+      return `${r.first_name} ${r.last_name} ${r.specialty} ${r.organization} ${r.npi}`.toLowerCase().includes(q);
+    });
+    const body = document.getElementById('providerSearchBody');
+    body.innerHTML = `
+      <div style="padding:12px 16px 8px; border-bottom:1px solid #eaecf0">
+        <input type="text" id="providerSearchInput" placeholder="Search by name, specialty, organization, NPI…" value="${escapeHtml(state.providerSearchQuery || '')}" style="width:100%" />
+      </div>
+      <div style="overflow:auto;max-height:380px">
+        <table class="contacts-tbl" style="width:100%">
+          <thead><tr>
+            <th>Name</th><th>Specialty</th><th>Organization</th><th>NPI</th><th>Address</th><th></th>
+          </tr></thead>
+          <tbody>
+            ${filtered.map((r) => `
+              <tr class="selectable" data-prov-id="${r.id}">
+                <td>${escapeHtml(r.first_name + ' ' + r.last_name)}${r.prof_designation ? ' <span style="color:var(--t4);font-size:10px">' + escapeHtml(r.prof_designation) + '</span>' : ''}</td>
+                <td>${escapeHtml(r.specialty)}</td>
+                <td>${escapeHtml(r.organization)}</td>
+                <td style="font-family:monospace;font-size:11px">${escapeHtml(r.npi)}</td>
+                <td style="font-size:11px;color:#667085">${escapeHtml(r.address + ', ' + r.city + ' ' + r.state)}</td>
+                <td><button type="button" class="btn xs" data-prov-select="${r.id}">Select</button></td>
+              </tr>`).join('')}
+            <tr class="create-new-row" id="providerSearchCreateNew" style="cursor:pointer">
+              <td colspan="6"><span style="color:#059054;font-weight:700">+ Create a new prescriber record</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>`;
+    document.getElementById('providerSearchInput').addEventListener('input', (e) => {
+      state.providerSearchQuery = e.target.value;
+      renderProviderSearchModal();
+    });
+    document.querySelectorAll('[data-prov-select]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        selectProviderMatch(btn.dataset.provSelect);
+        document.getElementById('providerSearchOverlay').style.display = 'none';
+      });
+    });
+    document.querySelectorAll('tr[data-prov-id]').forEach((tr) => {
+      tr.addEventListener('click', (e) => {
+        if (e.target.closest('[data-prov-select]')) return;
+        selectProviderMatch(tr.dataset.provId);
+        document.getElementById('providerSearchOverlay').style.display = 'none';
+      });
+    });
+    document.getElementById('providerSearchCreateNew').addEventListener('click', () => {
+      selectProviderMatch('new');
+      document.getElementById('providerSearchOverlay').style.display = 'none';
+    });
+  }
+
+  // Hook into wireModals
+function wireModals() {
+    document.getElementById('providerSearchCloseBtn').addEventListener('click', () => {
+      document.getElementById('providerSearchOverlay').style.display = 'none';
+    });
+
     document.getElementById('reclassifyCancelBtn').addEventListener('click', () => { state.reclassifyOpen = false; renderModals(); document.getElementById('reclassifyOverlay').style.display = 'none'; window._docTypeSelect.setValue(state.documentType); });
     document.getElementById('reclassifyCloseBtn').addEventListener('click', () => document.getElementById('reclassifyCancelBtn').click());
     document.getElementById('reclassifyConfirmBtn').addEventListener('click', () => {
@@ -1386,10 +2050,25 @@
       Claims.release(doc._id, 'reviewed');
       const refKey = findReferralSourceKey();
       const refVal = refKey ? state.fieldOverrides[refKey] : null;
+      // Report what happened with providers on this submit.
+      const newDrafts = state.providers.filter((p) => p.origin === 'draft');
+      const updatedCpr = state.providers.filter((p) => p.origin === 'cpr' && p.edited);
+      const provMsgs = [];
+      if (newDrafts.length) provMsgs.push(`${newDrafts.length} new prescriber record${newDrafts.length > 1 ? 's' : ''} created in records`);
+      if (updatedCpr.length) provMsgs.push(`${updatedCpr.length} shared record${updatedCpr.length > 1 ? 's' : ''} updated`);
+      // Promote drafts to cpr on submit (they now exist in records).
+      newDrafts.forEach((p) => { p.origin = 'cpr'; });
+      updatedCpr.forEach((p) => { p.edited = false; });
       renderSummaryBand();
-      toast(refVal
-        ? 'Saved & submitted — Referral Source synced to CPR+ → Patient Demographics (simulated)'
-        : 'Saved & submitted (simulated)');
+      const parts = ['Saved & submitted'];
+      if (refVal) parts.push('Referral Source synced to records → Patient Demographics');
+      if (provMsgs.length) parts.push(...provMsgs);
+      toast(parts.join(' · ') + ' (simulated)');
+    });
+    // Plain Save — persists field edits and draft provider rows without
+    // writing new records prescriber records. Drafts survive as "New — pending".
+    document.getElementById('saveDraftBtn').addEventListener('click', () => {
+      toast('Progress saved — draft providers not yet written to records');
     });
     document.getElementById('cancelBtn').addEventListener('click', () => { toast('Edits discarded (simulated)'); });
 
@@ -1439,6 +2118,11 @@
     });
     wireModals();
     wireClaimGate();
+    initProviders();
+    // matchSelectedId defaults to 'm1' (§1e of the exploration — the patient
+    // accordion always opens pre-selected), so the care team loads up front
+    // exactly as it would after the user confirms the match.
+    loadCareTeamForPatient(MATCH_CANDIDATES.find((c) => c.id === state.matchSelectedId));
     renderAll();
   });
 })();
