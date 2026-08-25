@@ -32,6 +32,7 @@
     providerSearchMode: 'match',  // 'match' (replace card #1) | 'add' (append a new peer card)
     providerSearchView: 'list',   // 'list' | 'form' — same two-view stack as contactsModal
     providerFormValues: {},
+    providerFormEditingId: null,  // CPR+ id being edited via the list's Edit icon, else null (= creating new)
     providerSearchSpecialty: '',
     providerSearchSortCol: 'name',
     providerSearchSortAsc: true,
@@ -49,6 +50,7 @@
     // were one shared pair before, so picking a provider silently rewrote the
     // patient selection.
     providerMatchSelectedId: null,
+    providerBannerExpanded: false, // §3 test-doc-only top-banner variant
     providers: [],                // ranked provider instances (see initProviders)
     providerDragUid: null,
     careTeamLoadedFor: null,      // MATCH_CANDIDATES id whose care team is already loaded
@@ -215,6 +217,10 @@
   const SEQ_FIELD_KEY = PROVIDER_REPEAT.serialField;
   const NPI_FIELD_KEY = PROVIDER_REPEAT.dedupeBy;
 
+  // §3 — the one document the top-banner match UI experiment runs on
+  // (302055_Referral_JessicaWhitfield…, extracted prescriber ANITA R DESAI).
+  const PROVIDER_BANNER_TEST_DOC_ID = '00000000000000000000000f';
+
   /* prescriber database — the fixture from PrescriberIntake-Scenario-
    * Modelling.xlsx, so the four modelled scenarios can be walked end to end. */
   const CPR_PRESCRIBERS = [
@@ -229,6 +235,12 @@
     { id: 'Pr5', first_name: 'Narayan', last_name: 'Verma', specialty: 'Neurology', organization: 'BG Tricounty Neurology and Sleep Clinic', address: '31150 Hoover Rd Suite B', city: 'Warren', state: 'MI', zip: '48093', npi: '1922441178', phone: '(586) 983-3666', prof_designation: 'MD FACP FAAN FAASM' },
     { id: 'Pr6', first_name: 'Narayan', last_name: 'Verma', specialty: 'Sleep Medicine', organization: 'Beaumont Neurology Associates', address: '44405 Woodward Ave', city: 'Pontiac', state: 'MI', zip: '48341', npi: '1033552289', phone: '(248) 551-0110', prof_designation: 'MD' },
     { id: 'Pr7', first_name: 'N.', last_name: 'Verma', specialty: 'Neurology', organization: 'Tricounty Sleep Center', address: '31150 Hoover Rd Suite B', city: 'Warren', state: 'MI', zip: '48093', npi: '1755663390', phone: '(586) 983-3699', prof_designation: 'DO' },
+    // Near-duplicates for the "ANITA R DESAI" extraction (302055_Referral_
+    // JessicaWhitfield…, doc 00000000000000000000000f) — the top-banner
+    // match-UI experiment (§3) needs a real multi-match to show.
+    { id: 'Pr8', first_name: 'Anita', last_name: 'Desai', specialty: 'Endocrinology', organization: 'Cornerstone Endocrine Group', address: '5422 Hoover Rd Suite C', city: 'Duluth', state: 'MN', zip: '55802', npi: '1699887744', phone: '(799) 605-1194', prof_designation: 'MD' },
+    { id: 'Pr9', first_name: 'Anita', last_name: 'Desai', specialty: 'Internal Medicine', organization: 'Duluth Family Health', address: '812 Superior St', city: 'Duluth', state: 'MN', zip: '55805', npi: '1477663322', phone: '(218) 727-4400', prof_designation: 'MD DO' },
+    { id: 'Pr10', first_name: 'A.', last_name: 'Desai', specialty: 'Endocrinology', organization: 'Lakeview Endocrinology Associates', address: '5422 Hoover Rd Suite C', city: 'Duluth', state: 'MN', zip: '55802', npi: '1355229988', phone: '(218) 727-9010', prof_designation: 'DO' },
   ];
 
   // Provider-card field label -> CPR record key. Used both to seed a card from
@@ -634,6 +646,33 @@
     return state.providers.some((p) => p.cprId === cprId);
   }
 
+  // Row click in the list dispatches on mode: 'match' replaces card #1 (the
+  // extracted prescriber decision); 'add' always appends a new peer card and
+  // never touches #1.
+  function pickProviderListRow(id) {
+    if (state.providerSearchMode !== 'add') { selectProviderMatch(id); return; }
+    if (providerAlreadyLinked(id)) {
+      toast('This prescriber is already assigned to this patient — no changes will be made');
+      return;
+    }
+    const rec = CPR_PRESCRIBERS.find((r) => r.id === id);
+    if (!rec) return;
+    addProviderFromRecord(rec, 'cpr', rec.id);
+    renderForm();
+    syncPrescribedProvider();
+    toast(`${rec.first_name} ${rec.last_name} added to this patient's care team`);
+  }
+
+  // Remove a provider from this patient by its CPR+ id (Unlink action in the
+  // list) — the record itself is untouched, only the link to this patient.
+  function unlinkProviderById(id) {
+    const p = state.providers.find((x) => x.cprId === id);
+    if (!p) return;
+    if (state.providers.length <= 1) { toast('At least one provider must remain on this patient'); return; }
+    removeProvider(p.uid);
+    renderProviderModal();
+  }
+
   function selectProviderMatch(id) {
     state.providerMatchSelectedId = id;
     const rec = CPR_PRESCRIBERS.find((r) => r.id === id);
@@ -671,12 +710,84 @@
     toast(`Linked to ${rec.first_name} ${rec.last_name} — differing values offer “Use extracted”`);
   }
 
+  // §3 — top-banner variant, styled identically to the patient match
+  // accordion (same .match-accordion/.match-radios markup and CSS), rendered
+  // above the form instead of inside card #1. Single-document experiment —
+  // see PROVIDER_BANNER_TEST_DOC_ID.
+  function renderProviderMatchBanner(wrap) {
+    wrap.style.display = 'block';
+    const cands = providerCandidates();
+    const selectedId = state.providerMatchSelectedId;
+    const selected = selectedId ? (selectedId === 'new' ? 'new' : CPR_PRESCRIBERS.find((r) => r.id === selectedId)) : null;
+    const title = 'Provider match found';
+    const subtitle = 'Review and confirm the matching provider record.';
+    const headerInner = selected && selected !== 'new'
+      ? `<span class="match-selected-summary"><span class="match-selected-main"><span class="match-selected-name">${escapeHtml(selected.first_name + ' ' + selected.last_name)}</span><span class="match-selected-meta">${escapeHtml(selected.specialty + ' · ' + selected.organization)}</span></span></span>`
+      : selected === 'new'
+        ? `<span class="match-selected-summary create-new"><span class="match-selected-main"><span class="match-selected-name">New prescriber record</span></span></span>`
+        : `<span class="match-tt"><span class="match-t1">${title}</span><span class="match-t2">${subtitle}</span></span>`;
+
+    wrap.innerHTML = `
+      <div class="match-accordion${state.providerBannerExpanded ? ' open' : ''}">
+        <button type="button" class="match-head" id="providerBannerToggleBtn">
+          <span class="match-ico${selected ? ' sel' : ''}">✓</span>
+          ${headerInner}
+          <span class="match-chevron"></span>
+        </button>
+        <div class="match-content" style="${state.providerBannerExpanded ? '' : 'display:none'}">
+          <div class="match-radios">
+            ${cands.map(({ rec }) => `
+              <label class="match-radio${state.providerMatchSelectedId === rec.id ? ' sel' : ''}">
+                <input type="radio" name="providerBannerChoice" ${state.providerMatchSelectedId === rec.id ? 'checked' : ''} data-id="${rec.id}">
+                <span class="match-radio-main">
+                  <span class="match-radio-name">${escapeHtml(rec.first_name + ' ' + rec.last_name)}</span>
+                  <span class="match-radio-meta">${escapeHtml(rec.specialty)} · NPI ${escapeHtml(rec.npi)} · ${escapeHtml(rec.organization)} · ${escapeHtml(rec.address + ', ' + rec.city + ' ' + rec.state)}</span>
+                </span>
+                <span class="match-status-badge match-status-active">On record</span>
+              </label>`).join('')}
+            <label class="match-radio create-new${state.providerMatchSelectedId === 'new' ? ' sel' : ''}">
+              <input type="radio" name="providerBannerChoice" ${state.providerMatchSelectedId === 'new' ? 'checked' : ''} data-id="new">
+              <span class="match-radio-main"><span class="match-radio-name">Create a new provider record</span></span>
+            </label>
+          </div>
+        </div>
+      </div>`;
+
+    document.getElementById('providerBannerToggleBtn').addEventListener('click', () => {
+      state.providerBannerExpanded = !state.providerBannerExpanded;
+      renderMatchAccordion();
+    });
+    wrap.querySelectorAll('input[name="providerBannerChoice"]').forEach((r) => {
+      r.addEventListener('change', (e) => {
+        const id = e.target.dataset.id;
+        state.providerBannerExpanded = false;
+        if (id === 'new') {
+          state.providerMatchSelectedId = 'new';
+          const p = state.providers[0];
+          if (p) { p.origin = 'draft'; p.cprId = null; }
+          renderForm();
+          toast('New prescriber will be created on Save & Submit');
+          return;
+        }
+        selectProviderMatch(id);
+      });
+    });
+  }
+
   function renderMatchAccordion() {
     const wrap = document.getElementById('matchRegion');
     if (!activeSectionUsesMatch()) { wrap.style.display = 'none'; return; }
     wrap.style.display = 'block';
     const isPatient = SCHEMA.sections[state.activeSectionIndex].title === 'Patient Demographics';
-    if (!isPatient) { wrap.style.display = 'none'; return; }
+    if (!isPatient) {
+      // §3 — one-doc experiment: try the patient-style top banner for
+      // provider matching instead of the card-embedded subtitle/popup,
+      // scoped to a single document so it doesn't change the default UX
+      // anywhere else.
+      if (doc._id === PROVIDER_BANNER_TEST_DOC_ID) { renderProviderMatchBanner(wrap); return; }
+      wrap.style.display = 'none';
+      return;
+    }
     const title = 'Patient match found';
     const subtitle = 'Review and confirm the matching patient record.';
     const selected = MATCH_CANDIDATES.find((c) => c.id === state.matchSelectedId);
@@ -928,8 +1039,11 @@
 
     // Match resolution for the extracted card lives entirely in the search
     // popup now — clicking the subtitle or the magnifier both open it, rather
-    // than an inline radio list competing for space inside the card.
-    if (index === 0 && p.origin === 'extracted') {
+    // than an inline radio list competing for space inside the card. Skipped
+    // on the §3 test doc, where match resolution instead lives in the
+    // top-of-form banner (renderProviderMatchBanner) so the two variants
+    // aren't shown at once.
+    if (index === 0 && p.origin === 'extracted' && doc._id !== PROVIDER_BANNER_TEST_DOC_ID) {
       const cands = providerCandidates();
       const selectedId = state.providerMatchSelectedId;
       const selected = selectedId ? (selectedId === 'new' ? 'new' : CPR_PRESCRIBERS.find((r) => r.id === selectedId)) : null;
@@ -1889,6 +2003,7 @@
   function openProviderSearch(mode) {
     state.providerSearchMode = mode || 'match';
     state.providerSearchView = 'list';
+    state.providerFormEditingId = null;
     state.providerSearchQuery = '';
     state.providerSearchSpecialty = '';
     state.providerSearchSortCol = 'name';
@@ -1902,9 +2017,22 @@
   function openProviderAddForm(mode) {
     state.providerSearchMode = mode || 'add';
     state.providerSearchView = 'form';
+    state.providerFormEditingId = null;
     state.providerFormValues = providerFormSeedValues();
     renderProviderModal();
     document.getElementById('providerSearchOverlay').style.display = 'flex';
+  }
+
+  // Edit icon on a list row (§1) — pre-fills the form from that on-file
+  // record instead of blank/extracted, same "edit before saving" shape as
+  // Contacts' Edit. Saving both updates the record and links/relinks it.
+  function openProviderEditForm(id) {
+    const rec = CPR_PRESCRIBERS.find((r) => r.id === id);
+    if (!rec) return;
+    state.providerFormEditingId = id;
+    state.providerSearchView = 'form';
+    state.providerFormValues = providerFormValuesFromRecord(rec);
+    renderProviderModal();
   }
 
   function closeProviderSearch() {
@@ -1912,7 +2040,7 @@
   }
 
   function providerModalTitleText() {
-    if (state.providerSearchView === 'form') return 'Add New Prescriber';
+    if (state.providerSearchView === 'form') return state.providerFormEditingId ? 'Edit Provider' : 'Add New Prescriber';
     return state.providerSearchMode === 'add' ? 'Add Provider' : 'Match Provider';
   }
 
@@ -1926,11 +2054,12 @@
       wireProviderFormSelects(state.providerFormValues);
       foot.style.display = 'flex';
       foot.innerHTML = `<button class="btn" type="button" id="providerFormCancelBtn">Cancel</button>
-        <button class="btn primary" type="button" id="providerFormCreateBtn">Create</button>`;
+        <button class="btn primary" type="button" id="providerFormCreateBtn">${state.providerFormEditingId ? 'Save changes' : 'Create'}</button>`;
       // Same as Contacts' directAdd: Cancel always goes to the list (never
       // closes outright) — even a form opened directly still has a list of
       // on-file providers to fall back to browsing/searching.
       document.getElementById('providerFormCancelBtn').addEventListener('click', () => {
+        state.providerFormEditingId = null;
         state.providerSearchView = 'list';
         renderProviderModal();
       });
@@ -1941,7 +2070,7 @@
       foot.innerHTML = '';
       wireProviderListEvents();
     }
-    document.getElementById('providerSearchBackBtn').onclick = () => { state.providerSearchView = 'list'; renderProviderModal(); };
+    document.getElementById('providerSearchBackBtn').onclick = () => { state.providerFormEditingId = null; state.providerSearchView = 'list'; renderProviderModal(); };
   }
 
   const PROVIDER_SEARCH_SORT_KEY = {
@@ -1956,19 +2085,23 @@
     return `<th data-prov-sort-col="${col}" style="cursor:pointer;user-select:none">${label}${active ? ` <span style="color:var(--t4)">${state.providerSearchSortAsc ? '▲' : '▼'}</span>` : ''}</th>`;
   }
 
-  // §2 — in 'match' mode, actual CPR+ candidates for the extracted prescriber
-  // sort to the top (highest score first) regardless of the chosen column;
-  // search/filter/sort all still apply within and below that group.
+  // §2 — in 'match' mode, until the reviewer types a search or picks a
+  // specialty filter, the list shows ONLY the actual CPR+ candidates for the
+  // extracted prescriber (not the whole directory). Searching or filtering
+  // drops that restriction and opens up to every provider, still sorted
+  // matches-first.
   function providerListRows() {
     const q = (state.providerSearchQuery || '').trim().toLowerCase();
-    let rows = CPR_PRESCRIBERS.filter((r) => {
+    const scored = state.providerSearchMode === 'match'
+      ? new Map(providerCandidates().map((c) => [c.rec.id, c.score]))
+      : new Map();
+    const restrictToMatches = state.providerSearchMode === 'match' && !q && !state.providerSearchSpecialty && scored.size > 0;
+    const source = restrictToMatches ? CPR_PRESCRIBERS.filter((r) => scored.has(r.id)) : CPR_PRESCRIBERS;
+    let rows = source.filter((r) => {
       if (q && !`${r.first_name} ${r.last_name} ${r.specialty} ${r.organization} ${r.npi}`.toLowerCase().includes(q)) return false;
       if (state.providerSearchSpecialty && r.specialty !== state.providerSearchSpecialty) return false;
       return true;
     });
-    const scored = state.providerSearchMode === 'match'
-      ? new Map(providerCandidates().map((c) => [c.rec.id, c.score]))
-      : new Map();
     const sortFn = PROVIDER_SEARCH_SORT_KEY[state.providerSearchSortCol] || PROVIDER_SEARCH_SORT_KEY.name;
     const dir = state.providerSearchSortAsc ? 1 : -1;
     rows.sort((a, b) => {
@@ -1976,14 +2109,15 @@
       if (sa !== sb) return sb - sa;
       return (sortFn(a) < sortFn(b) ? -1 : sortFn(a) > sortFn(b) ? 1 : 0) * dir;
     });
-    return { rows, scored };
+    return { rows, scored, restrictToMatches };
   }
 
   // Same toolbar + sortable gridwrap table as the Contacts / Referral Source
   // popup (contactsListMarkup) — reused visually so this reads as the same
-  // component, not a one-off search box.
+  // component, not a one-off search box. Actions column (Edit / Unlink)
+  // mirrors Contacts' sticky last column.
   function providerListMarkup() {
-    const { rows, scored } = providerListRows();
+    const { rows, scored, restrictToMatches } = providerListRows();
     const specialties = [...new Set(CPR_PRESCRIBERS.map((r) => r.specialty))].sort();
     return `
       <div class="contacts-toolbar">
@@ -1991,21 +2125,32 @@
         <div class="contacts-org-filter" id="providerSearchSpecialtySelect"></div>
         <button type="button" class="btn primary" id="providerSearchAddNewBtn">+ Add New</button>
       </div>
+      ${restrictToMatches ? `<div class="contacts-empty" style="padding:0 0 10px;text-align:left;color:var(--t3);font-size:11px">Showing ${rows.length} match${rows.length === 1 ? '' : 'es'} for the extracted prescriber. Search to see every provider.</div>` : ''}
       ${rows.length ? `<div class="gridwrap" style="overflow-x:auto;border:1px solid var(--border-lt);border-radius:8px"><table class="contacts-tbl"><thead><tr>
           ${providerSearchSortHeader('name', 'NAME')}
           ${providerSearchSortHeader('specialty', 'SPECIALTY')}
           ${providerSearchSortHeader('organization', 'ORGANIZATION')}
           ${providerSearchSortHeader('npi', 'NPI')}
           <th>ADDRESS</th>
+          <th></th>
         </tr></thead><tbody>
-          ${rows.map((r) => `
+          ${rows.map((r) => {
+            const linked = providerAlreadyLinked(r.id);
+            return `
             <tr class="selectable" data-prov-id="${r.id}">
-              <td>${escapeHtml(r.first_name + ' ' + r.last_name)}${scored.has(r.id) ? ' <span class="match-status-badge match-status-active" style="margin-left:4px">Match</span>' : ''}${r.prof_designation ? `<br><span style="color:var(--t4);font-size:10.5px">${escapeHtml(r.prof_designation)}</span>` : ''}</td>
+              <td>${escapeHtml(r.first_name + ' ' + r.last_name)}${scored.has(r.id) ? ' <span class="match-status-badge match-status-active" style="margin-left:4px">Match</span>' : ''}${linked ? ' <span class="match-status-badge match-status-pending" style="margin-left:4px">On this patient</span>' : ''}${r.prof_designation ? `<br><span style="color:var(--t4);font-size:10.5px">${escapeHtml(r.prof_designation)}</span>` : ''}</td>
               <td>${escapeHtml(r.specialty)}</td>
               <td>${escapeHtml(r.organization)}</td>
               <td style="font-family:monospace;font-size:11px">${escapeHtml(r.npi || '—')}</td>
               <td style="font-size:10.5px;color:var(--t4)">${escapeHtml(r.address + ', ' + r.city + ' ' + r.state)}</td>
-            </tr>`).join('')}
+              <td>
+                <div class="contact-row-actions">
+                  <button type="button" data-prov-edit="${r.id}" title="Edit provider" aria-label="Edit provider">${ICON_EDIT}</button>
+                  <button type="button" class="danger" data-prov-unlink="${r.id}" title="${linked ? 'Unlink from this patient' : 'Not linked to this patient'}" aria-label="Unlink provider" ${linked ? '' : 'disabled'}>${ICON_DELETE}</button>
+                </div>
+              </td>
+            </tr>`;
+          }).join('')}
         </tbody></table></div>`
         : `<div class="contacts-empty">No matching providers found.</div>`}
     `;
@@ -2023,7 +2168,24 @@
       renderProviderModalPreservingFocus('providerSearchInput');
     });
     document.querySelectorAll('tr[data-prov-id]').forEach((tr) => {
-      tr.addEventListener('click', () => { selectProviderMatch(tr.dataset.provId); closeProviderSearch(); });
+      tr.addEventListener('click', (e) => {
+        if (e.target.closest('[data-prov-edit]') || e.target.closest('[data-prov-unlink]')) return;
+        pickProviderListRow(tr.dataset.provId);
+        closeProviderSearch();
+      });
+    });
+    document.querySelectorAll('[data-prov-edit]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openProviderEditForm(btn.dataset.provEdit);
+      });
+    });
+    document.querySelectorAll('[data-prov-unlink]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (btn.disabled) return;
+        unlinkProviderById(btn.dataset.provUnlink);
+      });
     });
     document.querySelectorAll('[data-prov-sort-col]').forEach((th) => th.addEventListener('click', () => {
       const col = th.dataset.provSortCol;
@@ -2032,6 +2194,7 @@
       renderProviderModal();
     }));
     document.getElementById('providerSearchAddNewBtn').addEventListener('click', () => {
+      state.providerFormEditingId = null;
       state.providerSearchView = 'form';
       state.providerFormValues = providerFormSeedValues();
       renderProviderModal();
@@ -2078,6 +2241,20 @@
   const PROVIDER_FIRST_NAME_KEY = providerFieldKeyByLabel('First Name');
   const PROVIDER_LAST_NAME_KEY = providerFieldKeyByLabel('Last Name');
   const PROVIDER_SPECIALTY_KEY = providerFieldKeyByLabel('Specialty');
+
+  // Edit icon (§1): pre-fill the form from an on-file CPR+ record's mapped
+  // fields (name/specialty/org/address/phone/fax/email/npi/designation) —
+  // the fuller License Info / Contacts fields aren't modeled on the CPR
+  // fixture, so they render blank, same as any newly-linked record does.
+  function providerFormValuesFromRecord(rec) {
+    const values = {};
+    Object.keys(PROVIDER_RECORD_MAP).forEach((label) => {
+      const key = providerFieldKeyByLabel(label);
+      const v = rec[PROVIDER_RECORD_MAP[label]];
+      if (key && v) values[key] = v;
+    });
+    return values;
+  }
 
   // mode 'match': prefill from the extracted card's current values, same as
   // §11's "extracted information as the starting point". mode 'add': blank —
@@ -2160,7 +2337,31 @@
       toast('Specialty is required');
       return;
     }
+
+    const editingId = state.providerFormEditingId;
+    if (editingId) {
+      // Editing an on-file record updates it for everyone, same as editing a
+      // linked "From Record" card (§9's shared-record warning covers that
+      // case; this is the same write, just reached from the list).
+      const rec = CPR_PRESCRIBERS.find((r) => r.id === editingId);
+      if (rec) {
+        Object.keys(PROVIDER_RECORD_MAP).forEach((label) => {
+          const key = providerFieldKeyByLabel(label);
+          const v = key ? values[key] : undefined;
+          if (v !== undefined && v !== '' && v !== false) rec[PROVIDER_RECORD_MAP[label]] = v;
+        });
+      }
+      if (state.providerSearchMode === 'add' && providerAlreadyLinked(editingId)) {
+        state.providerFormEditingId = null;
+        closeProviderSearch();
+        toast('Record updated — already assigned to this patient, no change to the care team');
+        return;
+      }
+    }
+
     const p = makeProvider('draft', null, null);
+    p.origin = editingId ? 'cpr' : 'draft';
+    p.cprId = editingId || null;
     providerFields(p).forEach((f) => {
       const v = values[f.key];
       if (v !== undefined && v !== '' && v !== false) state.fieldOverrides[f._key] = v;
@@ -2180,15 +2381,16 @@
       } else {
         state.providers.unshift(p);
       }
-      state.providerMatchSelectedId = 'new';
+      state.providerMatchSelectedId = editingId || 'new';
     } else {
       state.providers.push(p);
     }
     renumberProviders();
+    state.providerFormEditingId = null;
     closeProviderSearch();
     renderForm();
     syncPrescribedProvider();
-    toast('New prescriber added — will be created in records on Save & Submit');
+    toast(editingId ? 'Prescriber record updated and linked to this patient' : 'New prescriber added — will be created in records on Save & Submit');
   }
 
   // Hook into wireModals
