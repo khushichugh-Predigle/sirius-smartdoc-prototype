@@ -298,6 +298,18 @@
     return (o !== undefined ? o : f._value) || '';
   }
 
+  // The pristine document extraction for a field, ignoring whatever the
+  // slot's current field._value/override has moved to after a match —
+  // scoring candidates against a moving target would make re-opening match
+  // resolution show different candidates depending on what's currently
+  // picked. Falls back to providerValue for a slot with no real extraction
+  // (e.g. a blank draft that became the match slot).
+  function providerExtractedValue(p, label) {
+    const f = providerFieldByLabel(p, label);
+    if (!f) return '';
+    return (f._extracted || '').toString().trim() || providerValue(p, label);
+  }
+
   function providerName(p) {
     const n = `${providerValue(p, 'First Name')} ${providerValue(p, 'Last Name')}`.trim();
     return n || 'Unnamed provider';
@@ -336,6 +348,11 @@
       cprId: null,
       record: null,
       edited: false,
+      // Stable marker for "the match-resolution slot" — origin flips to
+      // 'cpr'/'draft' the moment a match is picked, so code that needs to
+      // find this same card again (to let the reviewer change their pick)
+      // must not key off origin. This never changes once set.
+      isExtractedSlot: true,
     };
     state.providers = [extracted];
     renumberProviders();
@@ -615,20 +632,20 @@
   function norm(s) { return (s || '').toString().trim().toLowerCase(); }
 
   function providerMatchScore(rec) {
-    const p = state.providers[0];
+    const p = state.providers.find((x) => x.isExtractedSlot);
     if (!p) return 0;
     let score = 0;
-    if (norm(rec.last_name) && norm(rec.last_name) === norm(providerValue(p, 'Last Name'))) score += 40;
-    if (norm(rec.first_name) && norm(rec.first_name) === norm(providerValue(p, 'First Name'))) score += 20;
-    const npi = norm(providerValue(p, 'NPI'));
+    if (norm(rec.last_name) && norm(rec.last_name) === norm(providerExtractedValue(p, 'Last Name'))) score += 40;
+    if (norm(rec.first_name) && norm(rec.first_name) === norm(providerExtractedValue(p, 'First Name'))) score += 20;
+    const npi = norm(providerExtractedValue(p, 'NPI'));
     if (npi && norm(rec.npi) === npi) score += 40;
-    const org = norm(providerValue(p, 'Organization Name'));
+    const org = norm(providerExtractedValue(p, 'Organization Name'));
     if (org && norm(rec.organization).includes(org.split(' ')[0])) score += 10;
-    const spec = norm(providerValue(p, 'Specialty'));
+    const spec = norm(providerExtractedValue(p, 'Specialty'));
     if (spec && (norm(rec.specialty).startsWith(spec.slice(0, 6)) || spec.startsWith(norm(rec.specialty).slice(0, 6)))) score += 10;
     // Fuzzy address: compare digits only, so "456 Stake Steet" still matches
     // "456 Stake St" (Excel Scenario 2's deliberate typo).
-    const a = (providerValue(p, 'Address').match(/\d+/) || [])[0];
+    const a = (providerExtractedValue(p, 'Address').match(/\d+/) || [])[0];
     const b = (rec.address.match(/\d+/) || [])[0];
     if (a && a === b) score += 15;
     return score;
@@ -682,7 +699,7 @@
   // record's value, and any prior reviewer override on that field is
   // cleared — the record becomes the new baseline, not a manual edit.
   function populateExtractedProviderFromRecord(rec) {
-    const p = state.providers.find((x) => x.origin === 'extracted');
+    const p = state.providers.find((x) => x.isExtractedSlot);
     if (!p) return null;
     providerFields(p).forEach((f) => {
       const mapped = PROVIDER_RECORD_MAP[f.label.trim().toLowerCase()];
@@ -773,7 +790,7 @@
         state.providerBannerExpanded = false;
         if (id === 'new') {
           state.providerMatchSelectedId = 'new';
-          const p = state.providers[0];
+          const p = state.providers.find((x) => x.isExtractedSlot);
           if (p) { p.origin = 'draft'; p.cprId = null; }
           renderForm();
           toast('New prescriber will be created on Save & Submit');
@@ -1047,13 +1064,16 @@
     let matchHeader = '';
     let searchBtn = '';
 
-    // Match resolution for the extracted card lives entirely in the search
+    // Match resolution for the extracted slot lives entirely in the search
     // popup now — clicking the subtitle or the magnifier both open it, rather
-    // than an inline radio list competing for space inside the card. Skipped
-    // on the §3 test doc, where match resolution instead lives in the
-    // top-of-form banner (renderProviderMatchBanner) so the two variants
-    // aren't shown at once.
-    if (index === 0 && p.origin === 'extracted' && doc._id !== PROVIDER_BANNER_TEST_DOC_ID) {
+    // than an inline radio list competing for space inside the card. Keyed
+    // on isExtractedSlot (not origin/index) so this stays available to
+    // change the pick even after a match has already been made — origin
+    // flips to 'cpr'/'draft' the moment a match is picked, and reordering
+    // can move this card away from index 0. Skipped on the §3 test doc,
+    // where match resolution instead lives in the top-of-form banner
+    // (renderProviderMatchBanner) so the two variants aren't shown at once.
+    if (p.isExtractedSlot && doc._id !== PROVIDER_BANNER_TEST_DOC_ID) {
       const cands = providerCandidates();
       const selectedId = state.providerMatchSelectedId;
       const selected = selectedId ? (selectedId === 'new' ? 'new' : CPR_PRESCRIBERS.find((r) => r.id === selectedId)) : null;
@@ -2271,7 +2291,7 @@
   // this provider has no relationship to the document's extraction.
   function providerFormSeedValues() {
     if (state.providerSearchMode !== 'match') return {};
-    const p = state.providers[0];
+    const p = state.providers.find((x) => x.isExtractedSlot);
     if (!p) return {};
     const values = {};
     providerFields(p).forEach((f) => {
@@ -2378,8 +2398,8 @@
       // extraction), and it's written via fieldOverrides — since the
       // reviewer typed it by hand, it correctly shows as an edit (blue), not
       // a plain record-differs (amber).
-      let p = state.providers.find((x) => x.origin === 'extracted');
-      if (!p) { p = makeProvider('draft', null, null); state.providers.unshift(p); }
+      let p = state.providers.find((x) => x.isExtractedSlot);
+      if (!p) { p = makeProvider('draft', null, null); p.isExtractedSlot = true; state.providers.unshift(p); }
       providerFields(p).forEach((f) => {
         const v = values[f.key];
         if (v !== undefined && v !== '' && v !== false) state.fieldOverrides[f._key] = v;
