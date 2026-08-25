@@ -225,63 +225,54 @@
   }
 
   /* ---------- Add/Edit form ----------
-   * Field order/grouping/types mirror the real CPR+ Contact/Notes screen:
-   * a single-column stack of label:field rows, with a few compound rows
-   * (Name, City/State/ZIP, Office phone+ext+fax, Home phone+ext+fax,
-   * Pager/Cell, the 3 checkboxes) grouped side by side, plus Notes as its
-   * own panel on the right rather than just another field in the grid. */
-  function subfield(label, key, values, opts) {
+   * Layout/components are the prototype's original 2-column field grid
+   * (.contacts-field-grid) — only the field order and input types were
+   * taken from the real CPR+ Contact/Notes screen (Site as a dropdown,
+   * Associated Org filtered by the selected Org Type). */
+  function gridField(label, key, values, opts) {
     opts = opts || {};
-    return `<div class="contacts-subfield" style="flex:${opts.flex || 1}">
+    return `<div class="reclassify-field${opts.full ? ' full' : ''}">
       <label>${label}${opts.required ? ' <span class="req">*</span>' : ''}</label>
       <input type="${opts.type || 'text'}" data-contact-field="${key}" value="${esc(values[key] || '')}" />
     </div>`;
   }
 
+  const CONTACT_FIELDS = [
+    ['first_name', 'First Name', { required: true }],
+    ['last_name', 'Last Name', { required: true }],
+    ['title', 'Title', {}],
+    ['professional_designation', 'Prof Designation', {}],
+    ['organization', 'Organization', {}],
+    ['address', 'Address', { full: true }],
+    ['city', 'City', {}],
+    ['state', 'State', {}],
+    ['zip', 'ZIP', {}],
+    ['office_phone', 'Office Phone', {}],
+    ['office_ext', 'Office Ext', {}],
+    ['office_fax', 'Office Fax', {}],
+    ['home_phone', 'Home Phone', {}],
+    ['home_ext', 'Home Ext', {}],
+    ['home_fax', 'Home Fax', {}],
+    ['pager', 'Pager', {}],
+    ['cell', 'Cell', {}],
+    ['email', 'Email', { type: 'email' }],
+  ];
+
   function contactFormMarkup(values) {
     return `
-      <div class="contacts-form-layout">
-        <div class="contacts-form-fields">
-          <div class="contacts-compound-row">
-            ${subfield('First Name', 'first_name', values, { required: true })}
-            ${subfield('Last Name', 'last_name', values, { required: true })}
-          </div>
-          <div class="reclassify-field"><label>Title</label><input type="text" data-contact-field="title" value="${esc(values.title || '')}" /></div>
-          <div class="reclassify-field"><label>Prof Designation</label><input type="text" data-contact-field="professional_designation" value="${esc(values.professional_designation || '')}" /></div>
-          <div class="reclassify-field"><label>Organization</label><input type="text" data-contact-field="organization" value="${esc(values.organization || '')}" /></div>
-          <div class="reclassify-field"><label>Address</label><input type="text" data-contact-field="address" value="${esc(values.address || '')}" /></div>
-          <div class="contacts-compound-row">
-            ${subfield('City', 'city', values, { flex: 2 })}
-            ${subfield('State', 'state', values, { flex: 1 })}
-            ${subfield('ZIP', 'zip', values, { flex: 1 })}
-          </div>
-          <div class="contacts-compound-row">
-            ${subfield('Office', 'office_phone', values, { flex: 2 })}
-            ${subfield('Ext', 'office_ext', values, { flex: 1 })}
-            ${subfield('Fax', 'office_fax', values, { flex: 2 })}
-          </div>
-          <div class="contacts-compound-row">
-            ${subfield('Home', 'home_phone', values, { flex: 2 })}
-            ${subfield('Ext', 'home_ext', values, { flex: 1 })}
-            ${subfield('Fax', 'home_fax', values, { flex: 2 })}
-          </div>
-          <div class="contacts-compound-row">
-            ${subfield('Pager', 'pager', values, { flex: 1 })}
-            ${subfield('Cell', 'cell', values, { flex: 1 })}
-          </div>
-          <div class="reclassify-field"><label>Email</label><input type="email" data-contact-field="email" value="${esc(values.email || '')}" /></div>
-          <div class="reclassify-field"><label>Site</label><div id="contactSiteSelect"></div></div>
-          <div class="reclassify-field"><label>Org Type <span class="req">*</span></label><div id="contactOrgTypeSelect"></div></div>
-          <div class="reclassify-field"><label>Associated Org</label><div id="contactAssociatedOrgSelect"></div></div>
-          <div class="contacts-compound-row contacts-checkbox-row">
-            <label class="contacts-checkbox"><input type="checkbox" id="contactReferralFlag" ${values.referral_source ? 'checked' : ''} /> Referral Source</label>
-            <label class="contacts-checkbox"><input type="checkbox" id="contactWebAccessFlag" ${values.allow_web_access ? 'checked' : ''} /> Allow Web Access?</label>
-            <label class="contacts-checkbox"><input type="checkbox" id="contactPrimaryFlag" ${values.primary_contact ? 'checked' : ''} /> Primary Contact</label>
-          </div>
+      <div class="contacts-field-grid">
+        ${CONTACT_FIELDS.map(([key, label, opts]) => gridField(label, key, values, opts)).join('')}
+        <div class="reclassify-field"><label>Site</label><div id="contactSiteSelect"></div></div>
+        <div class="reclassify-field"><label>Org Type <span class="req">*</span></label><div id="contactOrgTypeSelect"></div></div>
+        <div class="reclassify-field"><label>Associated Org</label><div id="contactAssociatedOrgSelect"></div></div>
+        <div class="reclassify-field full contacts-checkbox-row">
+          <label class="contacts-checkbox"><input type="checkbox" id="contactReferralFlag" ${values.referral_source ? 'checked' : ''} /> Referral Source</label>
+          <label class="contacts-checkbox"><input type="checkbox" id="contactWebAccessFlag" ${values.allow_web_access ? 'checked' : ''} /> Allow Web Access?</label>
+          <label class="contacts-checkbox"><input type="checkbox" id="contactPrimaryFlag" ${values.primary_contact ? 'checked' : ''} /> Primary Contact</label>
         </div>
-        <div class="contacts-form-notes">
+        <div class="reclassify-field full">
           <label>Notes</label>
-          <textarea id="contactNotes" placeholder="Optional note…">${esc(values.notes || '')}</textarea>
+          <textarea id="contactNotes" rows="3" placeholder="Optional note…">${esc(values.notes || '')}</textarea>
         </div>
       </div>
       <input type="hidden" id="contactOrgTypeValue" value="${esc(values.org_type || '')}" />

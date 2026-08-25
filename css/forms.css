@@ -99,6 +99,16 @@ input[type="radio"], input[type="checkbox"] { width: 14px; height: 14px; padding
 .npi-lookup-btn { position: absolute; top: 50%; right: 8px; transform: translateY(-50%); display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 6px; background: transparent; cursor: pointer; }
 .npi-lookup-btn:hover { background: #f2f4f7; }
 .npi-lookup-btn svg { width: 18px; height: 18px; display: block; }
+
+/* Small icon affordance next to the Referral Source picker for opening the
+ * full searchable popup (disambiguating similarly-named contacts) — sits
+ * just left of CustomSelect's own chevron button rather than as an odd
+ * button-shaped row inside the dropdown list. */
+.referral-source-field-wrap { position: relative; }
+.referral-source-field-wrap .search-select-trigger { padding-right: 56px; }
+.referral-source-search-btn { position: absolute; top: 0; right: 28px; width: 24px; height: 31px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 0; background: transparent; cursor: pointer; }
+.referral-source-search-btn:hover { background: #f2f4f7; border-radius: 6px; }
+.referral-source-search-btn svg { width: 14px; height: 14px; display: block; }
 .npi-lookup-card, .drug-lookup-card {
   position: fixed; z-index: 1002; max-height: 260px; overflow: auto; padding: 4px; border: 1px solid #d0d5dd;
   border-radius: 8px; background: #fff; box-shadow: 0 8px 20px rgba(16,24,40,0.14);

@@ -61,6 +61,7 @@
 .match-accordion { border: 1px solid #e4e7ec; border-radius: 8px; background: #fff; overflow: hidden; }
 .match-head { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 auto; width: 100%; padding: 10px 12px; border: none; background: transparent; cursor: pointer; text-align: left; }
 .match-ico { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; flex: none; border-radius: 8px; background: #fef3c7; color: #b45309; }
+.match-ico.sel { background: #d1fae5; color: #059054; }
 .match-tt { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
 .match-t1 { color: #101828; font-size: 12.5px; font-weight: 800; line-height: 1.2; }
 .match-t2 { color: #667084; font-size: 11px; font-weight: 500; line-height: 1.3; }
@@ -110,7 +111,7 @@
 .reclassify-modal { width: 100%; max-width: 440px; background: var(--card); border: 1px solid var(--border-lt); border-radius: 10px; box-shadow: 0 18px 48px rgba(16,24,40,0.24); overflow: hidden; }
 /* Wide variant — same modal shell, sized for Contacts Management's
    search + list/form content instead of a short single-purpose form. */
-.reclassify-modal.wide { max-width: 860px; }
+.reclassify-modal.wide { max-width: 780px; }
 .reclassify-modal.wide .reclassify-body { max-height: 68vh; overflow-y: auto; }
 .reclassify-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; border-bottom: 1px solid var(--border-lt); }
 .reclassify-head h3 { margin: 0; font-size: 14px; font-weight: 700; color: #334053; }
@@ -193,20 +194,11 @@
 }
 .reclassify-field .contacts-checkbox { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--t2); font-weight: 500; }
 
-/* Add/Edit Contact form — single-column field stack (matching the real
-   CPR+ Contact/Notes layout) on the left, Notes as its own panel on the
-   right, instead of a generic 2-column field grid. */
-.contacts-form-layout { display: flex; gap: 20px; align-items: stretch; }
-.contacts-form-fields { flex: 1 1 60%; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
-.contacts-form-notes { flex: 1 1 40%; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
-.contacts-form-notes label { font-size: 11px; font-weight: 700; color: #334053; }
-.contacts-form-notes textarea { flex: 1; width: 100%; box-sizing: border-box; border: 1px solid var(--border); border-radius: 6px; padding: 8px; font-size: 12px; resize: vertical; min-height: 340px; }
-.contacts-compound-row { display: flex; gap: 10px; align-items: flex-end; }
-.contacts-compound-row .reclassify-field, .contacts-compound-row .contacts-subfield { min-width: 0; }
-.contacts-subfield { display: flex; flex-direction: column; gap: 4px; }
-.contacts-subfield label { font-size: 11px; font-weight: 700; color: #334053; }
-.contacts-subfield input { width: 100%; box-sizing: border-box; border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; font-size: 12px; }
-.contacts-checkbox-row { gap: 18px; padding-top: 4px; }
+/* Add/Edit Contact form — original 2-column field grid; field order/types
+   (not layout) are taken from the real CPR+ Contact/Notes screen. */
+.contacts-field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 16px; }
+.contacts-field-grid .reclassify-field.full { grid-column: 1 / -1; }
+.contacts-checkbox-row { display: flex; flex-direction: row; flex-wrap: wrap; gap: 18px; }
 .contacts-back-icon-btn {
   display: inline-flex; align-items: center; justify-content: center; flex: none;
   width: 26px; height: 26px; border: none; background: transparent; color: var(--t3);

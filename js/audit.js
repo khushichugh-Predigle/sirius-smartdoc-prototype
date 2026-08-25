@@ -39,5 +39,10 @@ window.AuditStamp = (function () {
     };
   }
 
-  return { stampFor };
+  function mrnFor(seed) {
+    const h = hash('mrn:' + String(seed));
+    return 'HC' + String(10000 + (h % 90000));
+  }
+
+  return { stampFor, mrnFor };
 })();

@@ -33,7 +33,10 @@
     evidenceOpenKey: null,
     npiCard: null,                // {fieldKey, top,left,width}
     drugCard: null,
-    matchExpanded: true,
+    // Starts collapsed — a match is already pre-selected, and showing the
+    // full candidate list open by default just repeats the same person the
+    // collapsed summary row already names. Expand only shows on request.
+    matchExpanded: false,
     matchSelectedId: 'm1',
     attachMode: null,             // null | 'existing' | 'new'
     attachedCase: null,
@@ -295,7 +298,7 @@
 
   function claimGateInterceptTarget(e) {
     if (e.target.closest('.evidence-badge')) return null;
-    return e.target.closest('input, textarea, .search-select-trigger, .npi-lookup-btn, .referral-source-select, .field-select');
+    return e.target.closest('input, textarea, .search-select-trigger, .npi-lookup-btn, .referral-source-select, .referral-source-search-btn, .field-select');
   }
 
   function wireClaimGate() {
@@ -460,7 +463,7 @@
     wrap.innerHTML = `
       <div class="match-accordion${state.matchExpanded ? ' open' : ''}">
         <button type="button" class="match-head" id="matchToggleBtn">
-          <span class="match-ico">✓</span>
+          <span class="match-ico${selected ? ' sel' : ''}">✓</span>
           ${headerInner}
           <span class="match-chevron"></span>
         </button>
@@ -484,6 +487,9 @@
     wrap.querySelectorAll('input[name="matchChoice"]').forEach((r) => {
       r.addEventListener('change', (e) => {
         state.matchSelectedId = e.target.dataset.id;
+        // Collapse back down once a choice is made — the accordion's job is
+        // just to confirm the match, not stay open and compete for attention.
+        state.matchExpanded = false;
         // "Existing matching patient selected -> populate Referral Source from
         // CPR+" (the user can still change it afterward — see field markup).
         const candidate = MATCH_CANDIDATES.find((c) => c.id === state.matchSelectedId);
@@ -528,7 +534,12 @@
         return `<div class="date-control"><input type="text" data-key="${field._key}" value="${escapeHtml(val)}" placeholder="MM/DD/YYYY" ${dis} /></div>`;
       case 'select': {
         if (field.label.trim().toLowerCase() === 'referral source') {
-          return `<div class="field-select referral-source-select" data-key="${field._key}" data-value="${escapeHtml(val)}" data-disabled="${disabled ? '1' : ''}"></div>`;
+          return `<div class="referral-source-field-wrap">
+            <div class="field-select referral-source-select" data-key="${field._key}" data-value="${escapeHtml(val)}" data-disabled="${disabled ? '1' : ''}"></div>
+            ${disabled ? '' : `<button type="button" class="referral-source-search-btn" data-key="${field._key}" aria-label="Search all referral sources" title="Search all referral sources">
+              <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="6.5" stroke="#667084" stroke-width="1.5"/><path d="M17 17l-3.2-3.2" stroke="#667084" stroke-width="1.5" stroke-linecap="round"/></svg>
+            </button>`}
+          </div>`;
         }
         let opts = (field.options || []).map((o) => ({ label: o.label, value: o.label }));
         if (val && !opts.some((o) => o.label === val)) opts = [{ label: val, value: val }].concat(opts);
@@ -654,11 +665,13 @@
     document.querySelectorAll('.referral-source-select').forEach((el) => {
       mountReferralSourceSelect(el, el.dataset.key, el.dataset.value || '', el.dataset.disabled === '1');
     });
+    document.querySelectorAll('.referral-source-search-btn').forEach((btn) => {
+      btn.addEventListener('click', (e) => { e.stopPropagation(); openReferralPopup(btn.dataset.key); });
+    });
   }
 
   /* ---------- Referral Source lookup (typeahead + "+ Add new" -> popup) ---------- */
   const ADD_NEW_REFERRAL = '__add_new_referral__';
-  const VIEW_ALL_REFERRAL = '__view_all_referral__';
 
   function referralSourceName(contact) {
     return `${contact.first_name} ${contact.last_name}`;
@@ -686,24 +699,14 @@
       if (c) opts.unshift({ label: referralSourceName(c), secondary: c.organization, value: c.id });
     }
     // Pinned first, not last — with 15+ contacts this needs to be reachable
-    // without scrolling through the whole alphabetical list. "View/search
-    // all" comes second, for when a name match alone isn't enough to tell
-    // similarly-named contacts apart (e.g. multiple John Smiths).
-    if (!disabled) {
-      opts.unshift({ label: 'Search all referral sources…', value: VIEW_ALL_REFERRAL, cls: 'search-select-option-action' });
-      opts.unshift({ label: '+ Add new referral source', value: ADD_NEW_REFERRAL, cls: 'search-select-option-action' });
-    }
+    // without scrolling through the whole alphabetical list.
+    if (!disabled) opts.unshift({ label: '+ Add new referral source', value: ADD_NEW_REFERRAL, cls: 'search-select-option-action' });
     const controller = CustomSelect.mount(el, {
       options: opts, value: value || '', ariaLabel: 'Referral Source', placeholder: 'Search referral source…', disabled: !!disabled,
       onChange: (v) => {
         if (v === ADD_NEW_REFERRAL) {
           controller.setValue(state.fieldOverrides[key] !== undefined ? state.fieldOverrides[key] : value);
           openReferralPopup(key, { directAdd: true });
-          return;
-        }
-        if (v === VIEW_ALL_REFERRAL) {
-          controller.setValue(state.fieldOverrides[key] !== undefined ? state.fieldOverrides[key] : value);
-          openReferralPopup(key);
           return;
         }
         state.fieldOverrides[key] = v;
@@ -913,64 +916,58 @@
     `;
   }
 
-  /* Field order/grouping/types mirror the real CPR+ Contact/Notes screen —
-   * see the identical layout in modules/contacts/contacts.js (this is the
-   * same contact-management micro-screen, reused here as a popup). */
-  function contactSubfield(label, key, values, opts) {
+  /* Layout/components are the prototype's original 2-column field grid
+   * (.contacts-field-grid) — see the identical layout in
+   * modules/contacts/contacts.js (this is the same contact-management
+   * micro-screen, reused here as a popup). Only field order/types were
+   * taken from the real CPR+ Contact/Notes screen. */
+  function gridField(label, key, values, opts) {
     opts = opts || {};
-    return `<div class="contacts-subfield" style="flex:${opts.flex || 1}">
+    return `<div class="reclassify-field${opts.full ? ' full' : ''}">
       <label>${label}${opts.required ? ' <span class="req">*</span>' : ''}</label>
       <input type="${opts.type || 'text'}" data-contact-field="${key}" value="${escapeHtml(values[key] || '')}" />
     </div>`;
   }
+
+  const CONTACT_FIELDS = [
+    ['first_name', 'First Name', { required: true }],
+    ['last_name', 'Last Name', { required: true }],
+    ['title', 'Title', {}],
+    ['professional_designation', 'Prof Designation', {}],
+    ['organization', 'Organization', {}],
+    ['address', 'Address', { full: true }],
+    ['city', 'City', {}],
+    ['state', 'State', {}],
+    ['zip', 'ZIP', {}],
+    ['office_phone', 'Office Phone', {}],
+    ['office_ext', 'Office Ext', {}],
+    ['office_fax', 'Office Fax', {}],
+    ['home_phone', 'Home Phone', {}],
+    ['home_ext', 'Home Ext', {}],
+    ['home_fax', 'Home Fax', {}],
+    ['pager', 'Pager', {}],
+    ['cell', 'Cell', {}],
+    ['email', 'Email', { type: 'email' }],
+  ];
 
   function contactsFormMarkup() {
     const isNew = contactsModal.editingId === 'new';
     const c = isNew ? contactsModal.formValues : ((window.CONTACTS || []).find((x) => x.id === contactsModal.editingId) || {});
     const values = Object.assign({}, c, contactsModal.formValues);
     return `
-      <div class="contacts-form-layout">
-        <div class="contacts-form-fields">
-          <div class="contacts-compound-row">
-            ${contactSubfield('First Name', 'first_name', values, { required: true })}
-            ${contactSubfield('Last Name', 'last_name', values, { required: true })}
-          </div>
-          <div class="reclassify-field"><label>Title</label><input type="text" data-contact-field="title" value="${escapeHtml(values.title || '')}" /></div>
-          <div class="reclassify-field"><label>Prof Designation</label><input type="text" data-contact-field="professional_designation" value="${escapeHtml(values.professional_designation || '')}" /></div>
-          <div class="reclassify-field"><label>Organization</label><input type="text" data-contact-field="organization" value="${escapeHtml(values.organization || '')}" /></div>
-          <div class="reclassify-field"><label>Address</label><input type="text" data-contact-field="address" value="${escapeHtml(values.address || '')}" /></div>
-          <div class="contacts-compound-row">
-            ${contactSubfield('City', 'city', values, { flex: 2 })}
-            ${contactSubfield('State', 'state', values, { flex: 1 })}
-            ${contactSubfield('ZIP', 'zip', values, { flex: 1 })}
-          </div>
-          <div class="contacts-compound-row">
-            ${contactSubfield('Office', 'office_phone', values, { flex: 2 })}
-            ${contactSubfield('Ext', 'office_ext', values, { flex: 1 })}
-            ${contactSubfield('Fax', 'office_fax', values, { flex: 2 })}
-          </div>
-          <div class="contacts-compound-row">
-            ${contactSubfield('Home', 'home_phone', values, { flex: 2 })}
-            ${contactSubfield('Ext', 'home_ext', values, { flex: 1 })}
-            ${contactSubfield('Fax', 'home_fax', values, { flex: 2 })}
-          </div>
-          <div class="contacts-compound-row">
-            ${contactSubfield('Pager', 'pager', values, { flex: 1 })}
-            ${contactSubfield('Cell', 'cell', values, { flex: 1 })}
-          </div>
-          <div class="reclassify-field"><label>Email</label><input type="email" data-contact-field="email" value="${escapeHtml(values.email || '')}" /></div>
-          <div class="reclassify-field"><label>Site</label><div id="contactSiteSelect"></div></div>
-          <div class="reclassify-field"><label>Org Type <span class="req">*</span></label><div id="contactOrgTypeSelect"></div></div>
-          <div class="reclassify-field"><label>Associated Org</label><div id="contactAssociatedOrgSelect"></div></div>
-          <div class="contacts-compound-row contacts-checkbox-row">
-            <label class="contacts-checkbox"><input type="checkbox" id="contactReferralFlag" ${values.referral_source ? 'checked' : ''} /> Referral Source</label>
-            <label class="contacts-checkbox"><input type="checkbox" id="contactWebAccessFlag" ${values.allow_web_access ? 'checked' : ''} /> Allow Web Access?</label>
-            <label class="contacts-checkbox"><input type="checkbox" id="contactPrimaryFlag" ${values.primary_contact ? 'checked' : ''} /> Primary Contact</label>
-          </div>
+      <div class="contacts-field-grid">
+        ${CONTACT_FIELDS.map(([key, label, opts]) => gridField(label, key, values, opts)).join('')}
+        <div class="reclassify-field"><label>Site</label><div id="contactSiteSelect"></div></div>
+        <div class="reclassify-field"><label>Org Type <span class="req">*</span></label><div id="contactOrgTypeSelect"></div></div>
+        <div class="reclassify-field"><label>Associated Org</label><div id="contactAssociatedOrgSelect"></div></div>
+        <div class="reclassify-field full contacts-checkbox-row">
+          <label class="contacts-checkbox"><input type="checkbox" id="contactReferralFlag" ${values.referral_source ? 'checked' : ''} /> Referral Source</label>
+          <label class="contacts-checkbox"><input type="checkbox" id="contactWebAccessFlag" ${values.allow_web_access ? 'checked' : ''} /> Allow Web Access?</label>
+          <label class="contacts-checkbox"><input type="checkbox" id="contactPrimaryFlag" ${values.primary_contact ? 'checked' : ''} /> Primary Contact</label>
         </div>
-        <div class="contacts-form-notes">
+        <div class="reclassify-field full">
           <label>Notes</label>
-          <textarea id="contactNotes" placeholder="Optional note…">${escapeHtml(values.notes || '')}</textarea>
+          <textarea id="contactNotes" rows="3" placeholder="Optional note…">${escapeHtml(values.notes || '')}</textarea>
         </div>
       </div>
       <input type="hidden" id="contactOrgTypeValue" value="${escapeHtml(values.org_type || '')}" />
