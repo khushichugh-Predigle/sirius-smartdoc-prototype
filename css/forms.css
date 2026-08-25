@@ -195,4 +195,14 @@ input:disabled, textarea:disabled, select:disabled, .search-select.disabled .sea
 .provider-search-btn { display:inline-flex; align-items:center; justify-content:center; width:26px; height:26px; padding:0; border:1px solid #d0d5dd; border-radius:6px; background:#fff; color:#667085; cursor:pointer; flex:none; }
 .provider-search-btn:not(:disabled):hover { background:#f2f4f7; border-color:#98a2b3; color:#344054; }
 .provider-search-btn:disabled { opacity:0.5; cursor:not-allowed; }
-.create-new-row:hover td { background:#f0fdf4; }
+
+/* Match-resolution subtitle under an extracted provider's name — a plain
+ * label once a match/create choice is made, a live clickable prompt (opens
+ * the search popup) while it's still unresolved. */
+.provider-match-subtitle {
+  display: inline-block; margin: 0; padding: 0; border: none; background: transparent;
+  font: inherit; font-size: 11px; color: #667085; text-align: left; cursor: default;
+}
+.provider-match-subtitle-live { color: #059054; font-weight: 700; cursor: pointer; }
+.provider-match-subtitle-live:not(:disabled):hover { text-decoration: underline; }
+.provider-match-subtitle:disabled { cursor: not-allowed; }

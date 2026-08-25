@@ -28,8 +28,11 @@
   const ext = doc.extracted_data[0];
 
   const state = {
-    providerMatchListExpanded: true,
     providerSearchQuery: '',
+    providerSearchMode: 'match',  // 'match' (replace card #1) | 'add' (append a new peer card)
+    providerSearchSpecialty: '',
+    providerSearchSortCol: 'name',
+    providerSearchSortAsc: true,
     activeSectionIndex: 0,
     collapsed: {},               // subsection id -> bool (collapsed)
     evidenceOpenKey: null,
@@ -43,7 +46,6 @@
     // Provider matching is a separate decision from patient matching — these
     // were one shared pair before, so picking a provider silently rewrote the
     // patient selection.
-    providerMatchExpanded: false,
     providerMatchSelectedId: null,
     providers: [],                // ranked provider instances (see initProviders)
     providerDragUid: null,
@@ -217,7 +219,14 @@
     { id: 'Pr1', first_name: 'John', last_name: 'Blaine', specialty: 'Oncology', organization: 'Jerky Pediatrics', address: '123 Dull Ave', city: 'Troy', state: 'MI', zip: '48083', npi: '1730123456', phone: '(586) 555-0101', prof_designation: 'MD' },
     { id: 'Pr2', first_name: 'Mary', last_name: 'Costa', specialty: 'Gastro', organization: 'Holy Hospitals', address: '234 Mill Rd', city: 'Warren', state: 'MI', zip: '48091', npi: '1922334455', phone: '(586) 555-0202', prof_designation: 'MD' },
     { id: 'Pr3', first_name: 'Abdu', last_name: 'Mohammed', specialty: 'Internal Medicine', organization: 'Piedmont Physicians', address: '456 Stake St', city: 'Warren', state: 'MI', zip: '48088', npi: '1811223344', phone: '(586) 555-0303', prof_designation: 'MD' },
-    { id: 'Pr4', first_name: 'A.', last_name: 'Mohammed', specialty: 'Hospitalist', organization: 'St. John Hospital', address: '456 Ryan Rd', city: 'Detroit', state: 'MI', zip: '48235', npi: '1647382910', phone: '(313) 555-0404', prof_designation: 'MD' }
+    { id: 'Pr4', first_name: 'A.', last_name: 'Mohammed', specialty: 'Hospitalist', organization: 'St. John Hospital', address: '456 Ryan Rd', city: 'Detroit', state: 'MI', zip: '48235', npi: '1647382910', phone: '(313) 555-0404', prof_designation: 'MD' },
+    // Deliberate near-duplicates for the "NARAYAN P VERMA" extraction (several
+    // dummy documents carry this prescriber, always with a blank NPI) — three
+    // on-file Vermas so the multi-match disambiguation UI has something real
+    // to disambiguate.
+    { id: 'Pr5', first_name: 'Narayan', last_name: 'Verma', specialty: 'Neurology', organization: 'BG Tricounty Neurology and Sleep Clinic', address: '31150 Hoover Rd Suite B', city: 'Warren', state: 'MI', zip: '48093', npi: '1922441178', phone: '(586) 983-3666', prof_designation: 'MD FACP FAAN FAASM' },
+    { id: 'Pr6', first_name: 'Narayan', last_name: 'Verma', specialty: 'Sleep Medicine', organization: 'Beaumont Neurology Associates', address: '44405 Woodward Ave', city: 'Pontiac', state: 'MI', zip: '48341', npi: '1033552289', phone: '(248) 551-0110', prof_designation: 'MD' },
+    { id: 'Pr7', first_name: 'N.', last_name: 'Verma', specialty: 'Neurology', organization: 'Tricounty Sleep Center', address: '31150 Hoover Rd Suite B', city: 'Warren', state: 'MI', zip: '48093', npi: '1755663390', phone: '(586) 983-3699', prof_designation: 'DO' },
   ];
 
   // Provider-card field label -> CPR record key. Used both to seed a card from
@@ -623,54 +632,8 @@
     return state.providers.some((p) => p.cprId === cprId);
   }
 
-  function renderProviderMatchAccordion(wrap) {
-    const cands = providerCandidates();
-    const selected = state.providerMatchSelectedId
-      ? CPR_PRESCRIBERS.find((r) => r.id === state.providerMatchSelectedId)
-      : null;
-    const extractedName = state.providers[0] ? providerName(state.providers[0]) : 'prescriber';
-    const headerInner = selected
-      ? `<span class="match-selected-summary"><span class="match-selected-main"><span class="match-selected-name">${escapeHtml(selected.first_name + ' ' + selected.last_name)}</span><span class="match-selected-meta">${escapeHtml(selected.specialty + ' · NPI ' + selected.npi + ' · ' + selected.organization)}</span></span></span>`
-      : `<span class="match-tt"><span class="match-t1">${cands.length ? `${cands.length} match${cands.length === 1 ? '' : 'es'} found` : 'No record found'}</span><span class="match-t2">${cands.length ? `Confirm which record “${escapeHtml(extractedName)}” refers to.` : `“${escapeHtml(extractedName)}” isn’t on record — create a new prescriber record.`}</span></span>`;
-
-    wrap.innerHTML = `
-      <div class="match-accordion${state.providerMatchExpanded ? ' open' : ''}">
-        <button type="button" class="match-head" id="matchToggleBtn">
-          <span class="match-ico${selected ? ' sel' : ''}">✓</span>
-          ${headerInner}
-          <span class="match-chevron"></span>
-        </button>
-        <div class="match-content" style="${state.providerMatchExpanded ? '' : 'display:none'}">
-          <div class="match-radios">
-            ${cands.map(({ rec }) => `
-              <label class="match-radio${state.providerMatchSelectedId === rec.id ? ' sel' : ''}">
-                <input type="radio" name="providerMatchChoice" ${state.providerMatchSelectedId === rec.id ? 'checked' : ''} data-id="${rec.id}">
-                <span class="match-radio-main">
-                  <span class="match-radio-name">${escapeHtml(rec.first_name + ' ' + rec.last_name)}</span>
-                  <span class="match-radio-meta">${escapeHtml(rec.specialty)} · NPI ${escapeHtml(rec.npi)} · ${escapeHtml(rec.organization)} · ${escapeHtml(rec.address + ', ' + rec.city + ' ' + rec.state)}</span>
-                </span>
-                ${providerAlreadyLinked(rec.id) ? '<span class="match-status-badge match-status-pending">On this patient</span>' : '<span class="match-status-badge match-status-active">On record</span>'}
-              </label>`).join('')}
-            <label class="match-radio create-new${state.providerMatchSelectedId === 'new' ? ' sel' : ''}">
-              <input type="radio" name="providerMatchChoice" ${state.providerMatchSelectedId === 'new' ? 'checked' : ''} data-id="new">
-              <span class="match-radio-main"><span class="match-radio-name">Create a new prescriber record</span></span>
-            </label>
-          </div>
-        </div>
-      </div>`;
-
-    document.getElementById('matchToggleBtn').addEventListener('click', () => {
-      state.providerMatchExpanded = !state.providerMatchExpanded;
-      renderMatchAccordion();
-    });
-    wrap.querySelectorAll('input[name="providerMatchChoice"]').forEach((r) => {
-      r.addEventListener('change', (e) => selectProviderMatch(e.target.dataset.id));
-    });
-  }
-
   function selectProviderMatch(id) {
     state.providerMatchSelectedId = id;
-    state.providerMatchExpanded = false;
     if (id === 'new') {
       // Excel Scenario 1/3: create from the extracted values. The card stays a
       // draft until Save & Submit, but is a peer row immediately so it can be
@@ -825,6 +788,15 @@
             </button>`}
           </div>`;
         }
+        // Prof. Designation: metadata.multiple — the real extraction returns
+        // it as one space-separated string ("MD FACP FAAN FAASM"), so parse
+        // that into a values[] for CustomSelect's multi-select mode rather
+        // than losing everything but the first credential.
+        if (field.metadata && field.metadata.multiple) {
+          const opts = (field.options || []).map((o) => ({ label: o.label, value: o.label }));
+          const values = String(val || '').split(/[\s,]+/).filter(Boolean);
+          return `<div class="field-select" data-key="${field._key}" data-multiple="1" data-values='${escapeHtml(JSON.stringify(values))}' data-options='${escapeHtml(JSON.stringify(opts))}' data-disabled="${disabled ? '1' : ''}"></div>`;
+        }
         // §14 — metadata.optionsFrom.source='providers': build options from
         // the ranked provider list so the Prescribed Provider dropdown in Drug
         // Orders always reflects the current care team. Default to Seq #1.
@@ -845,6 +817,11 @@
       default: {
         const isNpi = field.label.trim().toLowerCase() === 'npi';
         const isDrugName = field.label.trim().toLowerCase() === 'ordered item';
+        // Seq # is the ranking display, not a reviewer-typed value — dragging
+        // a card (or the match/create flow) is what moves it, never the input.
+        if (field.key === SEQ_FIELD_KEY) {
+          return `<input type="text" class="seq-readonly" data-key="${field._key}" value="${escapeHtml(val)}" readonly tabindex="-1" aria-readonly="true" />`;
+        }
         if (isNpi) {
           return `<div class="npi-field-wrap">
             <input class="has-lookup" type="text" data-key="${field._key}" value="${escapeHtml(val)}" placeholder="Enter value" ${dis} />
@@ -871,6 +848,7 @@
    * what Excel Scenario 2 ("no changes will be made") requires even though the
    * extracted values differ. The CSS for this already shipped in forms.css. */
   function providerFieldSourceRow(field) {
+    if (field.key === SEQ_FIELD_KEY) return '';
     const extracted = (field._extracted || '').toString().trim();
     if (!extracted) return '';
     const current = state.fieldOverrides[field._key];
@@ -885,6 +863,7 @@
 
   // Amber = differs from the record it was seeded from. Blue = reviewer edited it.
   function fieldStateClass(field) {
+    if (field.key === SEQ_FIELD_KEY) return '';
     const extracted = (field._extracted || '').toString().trim();
     const override = state.fieldOverrides[field._key];
     if (override !== undefined && String(override).trim() !== String(field._value || '').trim()) return ' pm-edited';
@@ -936,7 +915,7 @@
   const PROVIDER_ORIGIN_BADGE = {
     extracted: { cls: 'origin-extracted', text: 'Extracted' },
     cpr: { cls: 'origin-cpr', text: 'From Record' },
-    draft: { cls: 'origin-draft', text: 'New — pending' },
+    draft: { cls: 'origin-draft', text: 'New' },
   };
 
   /* One provider = the "Provider " subsection tree wrapped in a ranked card.
@@ -953,48 +932,29 @@
       : '';
       
     let matchHeader = '';
-    let matchBody = '';
     let searchBtn = '';
-    
+
+    // Match resolution for the extracted card lives entirely in the search
+    // popup now — clicking the subtitle or the magnifier both open it, rather
+    // than an inline radio list competing for space inside the card.
     if (index === 0 && p.origin === 'extracted') {
       const cands = providerCandidates();
       const selectedId = state.providerMatchSelectedId;
       const selected = selectedId ? (selectedId === 'new' ? 'new' : CPR_PRESCRIBERS.find((r) => r.id === selectedId)) : null;
-      
+
+      let subtitleText, subtitleCls;
       if (selected && selected !== 'new') {
-        matchHeader = `<span class="provider-match-subtitle">${escapeHtml(selected.first_name + ' ' + selected.last_name + ' · ' + selected.specialty + ' · ' + selected.organization)}</span>`;
+        subtitleText = `${selected.first_name} ${selected.last_name} · ${selected.specialty} · ${selected.organization}`;
+        subtitleCls = '';
       } else if (selected === 'new') {
-        matchHeader = `<span class="provider-match-subtitle" style="color:var(--text-secondary)">New prescriber record</span>`;
+        subtitleText = 'New prescriber record';
+        subtitleCls = '';
       } else {
         const cLen = cands.length;
-        const msg = cLen === 0 ? 'No record found' : (cLen === 1 ? '1 match found — confirm below' : cLen + ' matches found — select one');
-        matchHeader = `<span class="provider-match-subtitle" style="color:var(--brand);font-weight:600">${msg}</span>`;
+        subtitleText = cLen === 0 ? 'No record found' : `${cLen} match${cLen === 1 ? '' : 'es'} found — select one`;
+        subtitleCls = ' provider-match-subtitle-live';
       }
-
-      if (state.providerMatchListExpanded) {
-        matchBody = `
-          <div class="provider-match-list">
-            <div class="match-radios provider-match-radios">
-              ${cands.map(({ rec }) => `
-                <label class="match-radio${state.providerMatchSelectedId === rec.id ? ' sel' : ''}">
-                  <input type="radio" name="providerMatchChoice" ${state.providerMatchSelectedId === rec.id ? 'checked' : ''} data-id="${rec.id}">
-                  <span class="match-radio-main">
-                    <span class="match-radio-name">${escapeHtml(rec.first_name + ' ' + rec.last_name)}</span>
-                    <span class="match-radio-meta">${escapeHtml(rec.specialty)} · NPI ${escapeHtml(rec.npi)} · ${escapeHtml(rec.organization)} · ${escapeHtml(rec.address + ', ' + rec.city + ' ' + rec.state)}</span>
-                  </span>
-                  ${providerAlreadyLinked(rec.id) ? '<span class="match-status-badge match-status-pending">On this patient</span>' : '<span class="match-status-badge match-status-active">On record</span>'}
-                </label>`).join('')}
-              <label class="match-radio create-new${state.providerMatchSelectedId === 'new' ? ' sel' : ''}">
-                <input type="radio" name="providerMatchChoice" ${state.providerMatchSelectedId === 'new' ? 'checked' : ''} data-id="new">
-                <span class="match-radio-main">
-                  <span class="match-radio-name">+ Create a new prescriber record</span>
-                </span>
-              </label>
-            </div>
-          </div>`;
-      } else {
-        matchBody = `<div style="padding: 12px 16px; border-bottom: 1px solid #eaecf0; font-size: 13px;"><a href="#" class="provider-match-change-btn">Change match</a></div>`;
-      }
+      matchHeader = `<button type="button" class="provider-match-subtitle${subtitleCls}" data-provider-match-open="${p.uid}" ${locked ? 'disabled' : ''}>${escapeHtml(subtitleText)}</button>`;
 
       searchBtn = `<button type="button" class="provider-search-btn" data-provider-search="${p.uid}" title="Search provider directory" ${locked ? 'disabled' : ''}>
         <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="6.5" stroke="currentColor" stroke-width="1.5"/><path d="M17 17l-3.2-3.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
@@ -1018,7 +978,7 @@
         </span>
         <span class="subsection-chevron"></span>
       </div>
-      <div class="provider-card-body">${matchBody}${sharedWarning}${body}</div>
+      <div class="provider-card-body">${sharedWarning}${body}</div>
     </section>`;
   }
 
@@ -1065,7 +1025,10 @@
       });
     });
     document.querySelectorAll('.dynamic-form input[type="text"], .dynamic-form textarea').forEach((el) => {
-      el.addEventListener('input', (e) => { state.fieldOverrides[e.target.dataset.key] = e.target.value; });
+      el.addEventListener('input', (e) => {
+        state.fieldOverrides[e.target.dataset.key] = e.target.value;
+        markProviderEdited(e.target.dataset.key);
+      });
     });
     document.querySelectorAll('.evidence-badge').forEach((btn) => {
       btn.addEventListener('click', (e) => { e.stopPropagation(); toggleEvidence(btn.dataset.key, btn); });
@@ -1079,9 +1042,17 @@
     document.querySelectorAll('.field-select:not(.referral-source-select)').forEach((el) => {
       const key = el.dataset.key;
       const opts = JSON.parse(el.dataset.options || '[]');
+      if (el.dataset.multiple === '1') {
+        const values = JSON.parse(el.dataset.values || '[]');
+        CustomSelect.mount(el, {
+          options: opts, values, multiple: true, ariaLabel: 'field', disabled: el.dataset.disabled === '1',
+          onChangeMulti: (vs) => { state.fieldOverrides[key] = vs.join(' '); markProviderEdited(key); },
+        });
+        return;
+      }
       CustomSelect.mount(el, {
         options: opts, value: el.dataset.value || '', ariaLabel: 'field', disabled: el.dataset.disabled === '1',
-        onChange: (v) => { state.fieldOverrides[key] = v; },
+        onChange: (v) => { state.fieldOverrides[key] = v; markProviderEdited(key); },
       });
     });
     document.querySelectorAll('.referral-source-select').forEach((el) => {
@@ -1122,36 +1093,18 @@
   function wireProviderEvents() {
     document.querySelectorAll('[data-provider-toggle]').forEach((head) => {
       head.addEventListener('click', (e) => {
-        if (e.target.closest('[data-provider-remove]') || e.target.closest('.provider-drag') || e.target.closest('[data-provider-search]')) return;
+        if (e.target.closest('[data-provider-remove]') || e.target.closest('.provider-drag') || e.target.closest('[data-provider-search]') || e.target.closest('[data-provider-match-open]')) return;
         const p = providerByUid(head.dataset.providerToggle);
         if (!p) return;
         state.collapsed[p.sub._id] = !state.collapsed[p.sub._id];
         renderForm();
       });
     });
-    
-    document.querySelectorAll('.provider-match-change-btn').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        state.providerMatchListExpanded = true;
-        renderForm();
-      });
-    });
-    
-    document.querySelectorAll('.provider-match-radios input').forEach(r => {
-      r.addEventListener('change', (e) => {
-        state.providerMatchSelectedId = e.target.dataset.id;
-        state.providerMatchListExpanded = false;
-        selectProviderMatch(state.providerMatchSelectedId);
-      });
-    });
-    
-    document.querySelectorAll('[data-provider-search]').forEach((btn) => {
+    document.querySelectorAll('[data-provider-match-open], [data-provider-search]').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         if (btn.disabled) return;
-        openProviderSearch();
+        openProviderSearch('match');
       });
     });
     document.querySelectorAll('[data-provider-remove]').forEach((btn) => {
@@ -1890,16 +1843,11 @@
       renderForm();
     });
 
+    // "+ Add New" always opens the search popup first — the reviewer picks an
+    // existing on-file prescriber or creates a fresh one from there, rather
+    // than a blank card appearing directly in the list.
     document.getElementById('addProviderBtn').addEventListener('click', () => {
-      // Add a blank draft card at the end of the ranked list. The user fills
-      // in First Name / Last Name / Specialty manually. On Save & Submit the
-      // record will be created in records (origin === 'draft').
-      const p = addProviderFromRecord({}, 'draft', null);
-      // Expand the new card so it's ready to fill in.
-      state.collapsed[p.sub._id] = false;
-      syncPrescribedProvider();
-      renderForm();
-      toast('New prescriber card added — fill in details and Save & Submit to create in records');
+      openProviderSearch('add');
     });
   });
 
@@ -1937,66 +1885,140 @@
   }
 
   
-  function openProviderSearch() {
+  // 'match' (from card #1's subtitle/magnifier) replaces the extracted card in
+  // place. 'add' (from the section's "+ Add New" button) always appends a new
+  // peer card, never touching #1.
+  function openProviderSearch(mode) {
+    state.providerSearchMode = mode || 'match';
     state.providerSearchQuery = '';
+    state.providerSearchSpecialty = '';
+    state.providerSearchSortCol = 'name';
+    state.providerSearchSortAsc = true;
+    document.getElementById('providerSearchTitle').textContent = state.providerSearchMode === 'add' ? 'Add Provider' : 'Match Provider';
     renderProviderSearchModal();
     document.getElementById('providerSearchOverlay').style.display = 'flex';
   }
 
+  function closeProviderSearch() {
+    document.getElementById('providerSearchOverlay').style.display = 'none';
+  }
+
+  function pickProviderSearchResult(id) {
+    if (state.providerSearchMode === 'add') addProviderViaSearch(id);
+    else selectProviderMatch(id);
+    closeProviderSearch();
+  }
+
+  const PROVIDER_SEARCH_SORT_KEY = {
+    name: (r) => `${r.last_name} ${r.first_name}`.toLowerCase(),
+    specialty: (r) => r.specialty.toLowerCase(),
+    organization: (r) => r.organization.toLowerCase(),
+    npi: (r) => r.npi || '',
+  };
+
+  function providerSearchSortHeader(col, label) {
+    const active = state.providerSearchSortCol === col;
+    return `<th data-prov-sort-col="${col}" style="cursor:pointer;user-select:none">${label}${active ? ` <span style="color:var(--t4)">${state.providerSearchSortAsc ? '▲' : '▼'}</span>` : ''}</th>`;
+  }
+
+  // Same toolbar + sortable gridwrap table as the Contacts / Referral Source
+  // popup (contactsListMarkup) — reused visually so this reads as the same
+  // component, not a one-off search box.
   function renderProviderSearchModal() {
-    const q = (state.providerSearchQuery || '').toLowerCase();
-    const filtered = CPR_PRESCRIBERS.filter((r) => {
-      if (!q) return true;
-      return `${r.first_name} ${r.last_name} ${r.specialty} ${r.organization} ${r.npi}`.toLowerCase().includes(q);
+    const q = (state.providerSearchQuery || '').trim().toLowerCase();
+    let rows = CPR_PRESCRIBERS.filter((r) => {
+      if (q && !`${r.first_name} ${r.last_name} ${r.specialty} ${r.organization} ${r.npi}`.toLowerCase().includes(q)) return false;
+      if (state.providerSearchSpecialty && r.specialty !== state.providerSearchSpecialty) return false;
+      return true;
     });
+    const sortFn = PROVIDER_SEARCH_SORT_KEY[state.providerSearchSortCol] || PROVIDER_SEARCH_SORT_KEY.name;
+    rows.sort((a, b) => (sortFn(a) < sortFn(b) ? -1 : sortFn(a) > sortFn(b) ? 1 : 0) * (state.providerSearchSortAsc ? 1 : -1));
+    const specialties = [...new Set(CPR_PRESCRIBERS.map((r) => r.specialty))].sort();
+
     const body = document.getElementById('providerSearchBody');
     body.innerHTML = `
-      <div style="padding:12px 16px 8px; border-bottom:1px solid #eaecf0">
-        <input type="text" id="providerSearchInput" placeholder="Search by name, specialty, organization, NPI…" value="${escapeHtml(state.providerSearchQuery || '')}" style="width:100%" />
+      <div class="contacts-toolbar">
+        <input type="search" id="providerSearchInput" placeholder="Search providers by name, specialty, organization, NPI…" value="${escapeHtml(state.providerSearchQuery || '')}" />
+        <div class="contacts-org-filter" id="providerSearchSpecialtySelect"></div>
+        <button type="button" class="btn primary" id="providerSearchAddNewBtn">+ Add New</button>
       </div>
-      <div style="overflow:auto;max-height:380px">
-        <table class="contacts-tbl" style="width:100%">
-          <thead><tr>
-            <th>Name</th><th>Specialty</th><th>Organization</th><th>NPI</th><th>Address</th><th></th>
-          </tr></thead>
-          <tbody>
-            ${filtered.map((r) => `
-              <tr class="selectable" data-prov-id="${r.id}">
-                <td>${escapeHtml(r.first_name + ' ' + r.last_name)}${r.prof_designation ? ' <span style="color:var(--t4);font-size:10px">' + escapeHtml(r.prof_designation) + '</span>' : ''}</td>
-                <td>${escapeHtml(r.specialty)}</td>
-                <td>${escapeHtml(r.organization)}</td>
-                <td style="font-family:monospace;font-size:11px">${escapeHtml(r.npi)}</td>
-                <td style="font-size:11px;color:#667085">${escapeHtml(r.address + ', ' + r.city + ' ' + r.state)}</td>
-                <td><button type="button" class="btn xs" data-prov-select="${r.id}">Select</button></td>
-              </tr>`).join('')}
-            <tr class="create-new-row" id="providerSearchCreateNew" style="cursor:pointer">
-              <td colspan="6"><span style="color:#059054;font-weight:700">+ Create a new prescriber record</span></td>
-            </tr>
-          </tbody>
-        </table>
-      </div>`;
+      ${rows.length ? `<div class="gridwrap" style="overflow-x:auto;border:1px solid var(--border-lt);border-radius:8px"><table class="contacts-tbl"><thead><tr>
+          ${providerSearchSortHeader('name', 'NAME')}
+          ${providerSearchSortHeader('specialty', 'SPECIALTY')}
+          ${providerSearchSortHeader('organization', 'ORGANIZATION')}
+          ${providerSearchSortHeader('npi', 'NPI')}
+          <th>ADDRESS</th>
+        </tr></thead><tbody>
+          ${rows.map((r) => `
+            <tr class="selectable" data-prov-id="${r.id}">
+              <td>${escapeHtml(r.first_name + ' ' + r.last_name)}${r.prof_designation ? `<br><span style="color:var(--t4);font-size:10.5px">${escapeHtml(r.prof_designation)}</span>` : ''}</td>
+              <td>${escapeHtml(r.specialty)}</td>
+              <td>${escapeHtml(r.organization)}</td>
+              <td style="font-family:monospace;font-size:11px">${escapeHtml(r.npi || '—')}</td>
+              <td style="font-size:10.5px;color:var(--t4)">${escapeHtml(r.address + ', ' + r.city + ' ' + r.state)}</td>
+            </tr>`).join('')}
+        </tbody></table></div>`
+        : `<div class="contacts-empty">No matching providers found.</div>`}
+    `;
+
+    CustomSelect.mount(document.getElementById('providerSearchSpecialtySelect'), {
+      options: [{ label: 'All Specialties', value: '' }].concat(specialties.map((s) => ({ label: s, value: s }))),
+      value: state.providerSearchSpecialty, ariaLabel: 'Filter by specialty',
+      onChange: (v) => { state.providerSearchSpecialty = v; renderProviderSearchModal(); },
+    });
     document.getElementById('providerSearchInput').addEventListener('input', (e) => {
       state.providerSearchQuery = e.target.value;
-      renderProviderSearchModal();
-    });
-    document.querySelectorAll('[data-prov-select]').forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        selectProviderMatch(btn.dataset.provSelect);
-        document.getElementById('providerSearchOverlay').style.display = 'none';
-      });
+      renderProviderSearchModalPreservingFocus('providerSearchInput');
     });
     document.querySelectorAll('tr[data-prov-id]').forEach((tr) => {
-      tr.addEventListener('click', (e) => {
-        if (e.target.closest('[data-prov-select]')) return;
-        selectProviderMatch(tr.dataset.provId);
-        document.getElementById('providerSearchOverlay').style.display = 'none';
-      });
+      tr.addEventListener('click', () => pickProviderSearchResult(tr.dataset.provId));
     });
-    document.getElementById('providerSearchCreateNew').addEventListener('click', () => {
-      selectProviderMatch('new');
-      document.getElementById('providerSearchOverlay').style.display = 'none';
-    });
+    document.querySelectorAll('[data-prov-sort-col]').forEach((th) => th.addEventListener('click', () => {
+      const col = th.dataset.provSortCol;
+      if (state.providerSearchSortCol === col) state.providerSearchSortAsc = !state.providerSearchSortAsc;
+      else { state.providerSearchSortCol = col; state.providerSearchSortAsc = true; }
+      renderProviderSearchModal();
+    }));
+    document.getElementById('providerSearchAddNewBtn').addEventListener('click', () => pickProviderSearchResult('new'));
+  }
+
+  function renderProviderSearchModalPreservingFocus(inputId) {
+    const prev = document.getElementById(inputId);
+    const hadFocus = !!prev && document.activeElement === prev;
+    const selStart = hadFocus ? prev.selectionStart : null;
+    const selEnd = hadFocus ? prev.selectionEnd : null;
+    renderProviderSearchModal();
+    if (hadFocus) {
+      const next = document.getElementById(inputId);
+      if (next) {
+        next.focus();
+        if (selStart != null) { try { next.setSelectionRange(selStart, selEnd); } catch (e) { /* not all input types support this */ } }
+      }
+    }
+  }
+
+  // "+ Add New" flow (§5): pick an on-file prescriber to link as a new peer
+  // row, or create a blank draft card — mirrors selectProviderMatch's Excel
+  // Scenario 1/2 handling but appends instead of replacing card #1.
+  function addProviderViaSearch(id) {
+    if (id === 'new') {
+      const p = addProviderFromRecord({}, 'draft', null);
+      state.collapsed[p.sub._id] = false;
+      syncPrescribedProvider();
+      renderForm();
+      toast('New prescriber card added — fill in details and Save & Submit to create in records');
+      return;
+    }
+    const rec = CPR_PRESCRIBERS.find((r) => r.id === id);
+    if (!rec) return;
+    if (providerAlreadyLinked(id)) {
+      toast('This prescriber is already assigned to this patient — no changes will be made');
+      return;
+    }
+    addProviderFromRecord(rec, 'cpr', rec.id);
+    renderForm();
+    syncPrescribedProvider();
+    toast(`${rec.first_name} ${rec.last_name} added to this patient's care team`);
   }
 
   // Hook into wireModals
