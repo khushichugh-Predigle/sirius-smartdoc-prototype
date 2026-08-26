@@ -86,21 +86,6 @@ input.tb-input.doc-age-date { width: 140px; color: var(--t2); }
 .date-range-field .doc-age-sep { padding: 0 2px; }
 
 .gridwrap { flex: 1; min-height: 80px; overflow: auto; background: #fff; position: relative; }
-/* Subtle grey scroll-shadow at whichever edge still has more columns to
-   scroll to. A background-gradient painted on .gridwrap itself is invisible
-   here — the table's own opaque cell backgrounds sit on top of it and cover
-   it completely — so this is an overlay pinned to the container's edges
-   instead, toggled by initGridwrapShadows() in js/shell.js (shared by every
-   table in the app: queue, patients, case management, contacts, provider
-   search popup). */
-.gridwrap::before, .gridwrap::after {
-  content: ''; position: absolute; top: 0; bottom: 0; width: 18px; z-index: 3;
-  pointer-events: none; opacity: 0; transition: opacity 0.15s ease;
-}
-.gridwrap::before { left: 0; background: linear-gradient(to right, rgba(16,24,40,0.14), rgba(16,24,40,0)); }
-.gridwrap::after { right: 0; background: linear-gradient(to left, rgba(16,24,40,0.14), rgba(16,24,40,0)); }
-.gridwrap.shadow-left::before { opacity: 1; }
-.gridwrap.shadow-right::after { opacity: 1; }
 table.grid { width: 100%; border-collapse: collapse; font-size: 11.5px; }
 table.grid thead th {
   position: sticky; top: 0; background: #f2f4f6; border-bottom: 1px solid var(--border);

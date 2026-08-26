@@ -5225,6 +5225,33 @@ window.INTAKE_FORM_SCHEMA = {
               "nestedFields": []
             },
             {
+              "key": "e6a41a4a-0a17-4e13-8e5d-0dc9b5c7f0e2",
+              "type": "select",
+              "label": "Referral Source",
+              "required": false,
+              "hint": "",
+              "description": "",
+              "prefixIcon": "",
+              "suffixIcon": "",
+              "hintIcon": "",
+              "conditions": [],
+              "order": 8,
+              "placeholder": "Search referral source…",
+              "layout": {
+                "col": 12
+              },
+              "title": "",
+              "subtitle": "",
+              "badgeText": "",
+              "emptyCtaTitle": "",
+              "addButtonLabel": "",
+              "removeButtonLabel": "",
+              "items": [],
+              "options": [],
+              "columns": [],
+              "nestedFields": []
+            },
+            {
               "key": "1d857469-3d7e-4b38-80e1-d0f6df158573",
               "type": "select",
               "label": "Prescribed Provider",
@@ -5235,7 +5262,7 @@ window.INTAKE_FORM_SCHEMA = {
               "suffixIcon": "",
               "hintIcon": "",
               "conditions": [],
-              "order": 8,
+              "order": 9,
               "placeholder": "",
               "layout": {
                 "col": 12
@@ -5271,7 +5298,7 @@ window.INTAKE_FORM_SCHEMA = {
               "suffixIcon": "",
               "hintIcon": "",
               "conditions": [],
-              "order": 9,
+              "order": 10,
               "placeholder": "Write details here",
               "rows": 4,
               "maxLength": 250,

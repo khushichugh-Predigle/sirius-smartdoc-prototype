@@ -10,7 +10,9 @@
 <link rel="stylesheet" href="../../css/tokens.css" />
 <link rel="stylesheet" href="../../css/shell.css" />
 <link rel="stylesheet" href="../../css/v64-components.css" />
-<link rel="stylesheet" href="patients.css" />
+<link rel="stylesheet" href="../../css/custom-select.css" />
+<link rel="stylesheet" href="../../css/table.css" />
+<link rel="stylesheet" href="../../css/document-detail.css" />
 </head>
 <body>
 <div id="app">
@@ -195,29 +197,46 @@
     </aside>
 
     <div class="main">
-      <div class="pagehead"><h1>Patients</h1><div class="spacer"></div>
-        <button class="btn primary" onclick="openAddPatientModal()"><span data-ic="plus"></span> Add Patient</button>
-        <button class="btn" onclick="renderPatients();toast('Refreshed')"><span data-ic="refresh"></span> Refresh</button>
-      </div>
-      <div class="toolbar">
-        <input class="tb-input" id="ptSearch" placeholder="Search name, DOB, MRN, drug, payer…" style="width:230px" oninput="renderPatients()">
-        <select class="tb-input" id="ptStatusFilter" style="width:150px" onchange="renderPatients()">
-          <option value="">All Patients</option>
-          <option value="active">Has Active Cases</option>
-          <option value="done">All Cases Closed</option>
-        </select>
+      <div class="pagehead">
+        <h1>Patients</h1>
         <div class="spacer"></div>
-        <span class="tb-meta" id="ptMeta"></span>
+        <button class="btn primary" id="patientsAddNewBtn" type="button"><span data-ic="plus"></span> Add New</button>
       </div>
-      <div class="gridwrap"><table class="grid" id="ptGrid"><thead></thead><tbody></tbody></table></div>
+      <div id="patientsPageBody" style="padding:0 18px 18px;overflow:auto"></div>
     </div>
   </div>
 </div>
 
-<div class="overlay" id="ovl"><div class="modal" id="modalBox"></div></div>
+<!-- Add/Edit patient modal -->
+<div class="reclassify-overlay" id="patientFormOverlay" style="display:none">
+  <div class="reclassify-modal wide" role="dialog" aria-modal="true">
+    <div class="reclassify-head">
+      <h3 id="patientFormTitle">Add New Patient</h3>
+      <button type="button" class="reclassify-close" id="patientFormCloseBtn" aria-label="Close">&times;</button>
+    </div>
+    <div class="reclassify-body" id="patientFormBody"></div>
+    <div class="reclassify-foot" id="patientFormFoot"></div>
+  </div>
+</div>
 
+<!-- Delete patient confirm -->
+<div class="reclassify-overlay" id="deletePatientOverlay" style="display:none">
+  <div class="reclassify-modal" role="dialog" aria-modal="true">
+    <div class="reclassify-head"><h3>Delete Patient</h3>
+      <button type="button" class="reclassify-close" id="deletePatientCloseBtn" aria-label="Close">&times;</button>
+    </div>
+    <div class="reclassify-body">
+      <p class="reject-lead">Delete <b id="deletePatientName"></b>? This cannot be undone.</p>
+    </div>
+    <div class="reclassify-foot">
+      <button class="btn" type="button" id="deletePatientCancelBtn">Cancel</button>
+      <button class="btn danger" type="button" id="deletePatientConfirmBtn">Delete</button>
+    </div>
+  </div>
+</div>
+
+<script src="../../js/custom-select.js"></script>
 <script src="../../js/icons.js"></script>
-<script src="../../js/v64-helpers.js"></script>
 <script src="../../js/shell.js"></script>
 <script src="../../js/audit.js"></script>
 <script src="../../data/patients-data.js"></script>

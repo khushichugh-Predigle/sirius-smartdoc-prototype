@@ -1119,6 +1119,7 @@
   }
 
   function renderForm() {
+    syncDrugReferralSource();
     const sec = SCHEMA.sections[state.activeSectionIndex];
     document.getElementById('formSectionTitle').textContent = sec.title;
     const isDrugSection = sec.title === 'Drug Orders';
@@ -1835,12 +1836,50 @@
     document.getElementById('deleteContactOverlay').style.display = 'flex';
   }
 
+  // Patient Demographics' own Referral Source field — scoped to that section
+  // specifically, since Drug Orders now has a field with the same label
+  // (§1) and a bare label-only scan would ambiguously return whichever one
+  // was walked last.
   function findReferralSourceKey() {
     let found = null;
+    const sec = SCHEMA.sections.find((s) => s.title === 'Patient Demographics');
+    if (!sec) return null;
     function scan(list) { (list || []).forEach((f) => { if (f.label.trim().toLowerCase() === 'referral source') found = f._key; }); }
     function walk(sub) { scan(sub.fields); (sub.subsections || []).forEach(walk); }
-    SCHEMA.sections.forEach((sec) => { scan(sec.fields); (sec.subsections || []).forEach(walk); });
+    scan(sec.fields);
+    (sec.subsections || []).forEach(walk);
     return found;
+  }
+
+  // Every Drug Order row's own Referral Source field key (one per row,
+  // including "+ Add Drug" clones).
+  function findDrugReferralSourceKeys() {
+    const keys = [];
+    function scan(list) { (list || []).forEach((f) => { if (f.label.trim().toLowerCase() === 'referral source') keys.push(f._key); }); }
+    function walk(sub) { scan(sub.fields); (sub.subsections || []).forEach(walk); }
+    const sec = SCHEMA.sections.find((s) => s.title === 'Drug Orders');
+    if (sec) (sec.subsections || []).forEach(walk);
+    state.extraDrugSubsections.forEach(walk);
+    return keys;
+  }
+
+  // §1 — "Default the Referral Source from patient demographics, user can
+  // change if required." A row only ever gets defaulted while its own
+  // fieldOverrides entry is still unset, so the moment a reviewer edits one
+  // row's Referral Source it stops tracking Patient Demographics — matching
+  // the real app's actual sync-until-touched behavior for this exact field.
+  // Idempotent and cheap, so it's safe to call on every render rather than
+  // chase down every place the patient's Referral Source can change.
+  function syncDrugReferralSource() {
+    const patientKey = findReferralSourceKey();
+    if (!patientKey) return;
+    const patientField = findFieldByKey(patientKey);
+    if (!patientField) return;
+    const patientVal = state.fieldOverrides[patientKey] !== undefined ? state.fieldOverrides[patientKey] : patientField._value;
+    if (!patientVal) return;
+    findDrugReferralSourceKeys().forEach((key) => {
+      if (state.fieldOverrides[key] === undefined) state.fieldOverrides[key] = patientVal;
+    });
   }
 
   function findFieldByKey(key) {
