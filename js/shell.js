@@ -194,3 +194,30 @@ function toast(message) {
     setTimeout(() => el.remove(), 200);
   }, 2600);
 }
+
+/* Native title="" tooltip on any table cell whose text is actually clipped
+ * (scrollWidth > clientWidth) — deliberately native (no custom popover/CSS/
+ * z-index of its own) so it can't fail invisibly the way a hand-built
+ * tooltip can. Runs on every page via this file; a debounced MutationObserver
+ * picks up tables rebuilt by innerHTML re-renders, since scrollWidth can only
+ * be measured after the new markup is actually in the DOM. */
+(function () {
+  function apply() {
+    document.querySelectorAll('table td, table th').forEach((cell) => {
+      const truncated = cell.scrollWidth > cell.clientWidth + 1;
+      if (truncated) {
+        const text = cell.textContent.trim();
+        if (text && cell.title !== text) cell.title = text;
+      } else if (cell.title) {
+        cell.removeAttribute('title');
+      }
+    });
+  }
+  let timer = null;
+  function schedule() { clearTimeout(timer); timer = setTimeout(apply, 120); }
+  window.addEventListener('resize', schedule);
+  document.addEventListener('DOMContentLoaded', () => {
+    schedule();
+    new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true });
+  });
+})();

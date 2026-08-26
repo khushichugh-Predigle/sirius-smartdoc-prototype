@@ -167,6 +167,11 @@ td .sub{color:var(--t4);font-size:10px}
 
 /* badges */
 .bdg{display:inline-flex;align-items:center;gap:4px;height:17px;padding:0 7px;border-radius:9px;font-size:10px;font-weight:600;white-space:nowrap}
+/* No status dots anywhere in the app — the badge's fill/text color already
+   carries the status, the dot was redundant. Hidden rather than stripped
+   from every emitting call site (many files), so this one rule covers all
+   of them at once. */
+.bdg .d{display:none}
 .stage-pill{display:inline-flex;align-items:center;height:19px;padding:0 9px;border-radius:6px;font-size:10.5px;font-weight:600;white-space:nowrap;background:#F8FAFC;border:1px solid var(--border);color:var(--t2)}
 .bdg .d{width:5px;height:5px;border-radius:50%}
 .bdg.ok{background:var(--ok-bg);color:var(--ok-tx)}.bdg.ok .d{background:var(--ok)}

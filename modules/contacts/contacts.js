@@ -307,17 +307,36 @@
     </div>`;
   }
 
+  const CONTACT_VIEW_GROUPS = [
+    ['Personal Info', ['first_name', 'last_name', 'title', 'professional_designation']],
+    ['Organization & Site', ['organization', 'org_type', 'associated_org', 'site', 'address', 'city', 'state', 'zip']],
+    ['Contact Details', ['office_phone', 'office_ext', 'office_fax', 'home_phone', 'home_ext', 'home_fax', 'pager', 'cell', 'email']],
+  ];
+  const CONTACT_FIELD_BY_KEY = {};
+  CONTACT_FIELDS.forEach(([key, label, opts]) => { CONTACT_FIELD_BY_KEY[key] = [label, opts]; });
+  CONTACT_FIELD_BY_KEY.org_type = ['Org Type', {}];
+  CONTACT_FIELD_BY_KEY.associated_org = ['Associated Org', {}];
+  CONTACT_FIELD_BY_KEY.site = ['Site', {}];
+
+  function groupHeading(label) {
+    return `<div class="reclassify-field full provider-form-group-heading">${label}</div>`;
+  }
+
   function contactViewMarkup(c) {
     return `
       <div class="contacts-field-grid">
-        ${CONTACT_FIELDS.map(([key, label, opts]) => viewField(label, c[key], opts)).join('')}
-        ${viewField('Site', c.site)}
-        ${viewField('Org Type', c.org_type)}
-        ${viewField('Associated Org', c.associated_org)}
+        ${CONTACT_VIEW_GROUPS.map(([heading, keys]) => `
+          ${groupHeading(heading)}
+          ${keys.map((key) => {
+            const [label, opts] = CONTACT_FIELD_BY_KEY[key];
+            return viewField(label, c[key], opts);
+          }).join('')}
+        `).join('')}
+        ${groupHeading('Flags & Notes')}
         <div class="reclassify-field full contacts-checkbox-row">
-          <span class="patient-view-flag">${c.referral_source ? '✓' : '—'} Referral Source</span>
-          <span class="patient-view-flag">${c.allow_web_access ? '✓' : '—'} Allow Web Access</span>
-          <span class="patient-view-flag">${c.primary_contact ? '✓' : '—'} Primary Contact</span>
+          <span class="patient-view-flag ${c.referral_source ? 'on' : 'off'}">${c.referral_source ? '✓' : '—'} Referral Source</span>
+          <span class="patient-view-flag ${c.allow_web_access ? 'on' : 'off'}">${c.allow_web_access ? '✓' : '—'} Allow Web Access</span>
+          <span class="patient-view-flag ${c.primary_contact ? 'on' : 'off'}">${c.primary_contact ? '✓' : '—'} Primary Contact</span>
         </div>
         ${viewField('Notes', c.notes, { full: true })}
       </div>

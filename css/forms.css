@@ -211,7 +211,7 @@ input:disabled, textarea:disabled, select:disabled, .search-select.disabled .sea
  * Contacts' .contacts-field-grid) — separates Prescriber / Organization /
  * License Info / Contacts without introducing a new layout primitive. */
 .provider-form-group-heading {
-  padding-top: 6px; margin-top: 4px; border-top: 1px solid var(--border-lt);
-  font-size: 11px; font-weight: 800; letter-spacing: 0.02em; text-transform: uppercase; color: var(--t3);
+  padding-top: 12px; margin-top: 18px; border-top: 1px solid var(--border);
+  font-size: 11px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase; color: var(--t3);
 }
 .contacts-field-grid > .provider-form-group-heading:first-child { margin-top: 0; border-top: none; padding-top: 0; }

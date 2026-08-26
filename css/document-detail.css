@@ -180,17 +180,21 @@
 .contacts-tbl th { text-align: left; font-size: 10px; font-weight: 700; color: var(--t4); letter-spacing: .04em; padding: 6px 10px; border-bottom: 1px solid var(--border-lt); background: var(--chrome); white-space: nowrap; }
 .contacts-tbl td { padding: 8px 10px; border-bottom: 1px solid var(--border-lt); vertical-align: middle; color: var(--t1); white-space: nowrap; }
 .contacts-tbl tr:last-child td { border-bottom: none; }
+/* Same white/grey row treatment and hover color as Document Intake's
+   table.grid (css/table.css) — one shared visual language for every table. */
+.contacts-tbl tbody tr:nth-child(even) td { background: #fafbfc; }
 .contacts-tbl tr.selectable { cursor: pointer; }
-.contacts-tbl tr.selectable:hover td { background: var(--teal-faint); }
+.contacts-tbl tbody tr:hover td { background: #f1f5f6; }
 .contacts-tbl th:first-child, .contacts-tbl td:first-child {
   position: sticky; left: 0; z-index: 1; background: #ffffff; box-shadow: 1px 0 0 var(--border-lt);
 }
+.contacts-tbl tbody tr:nth-child(even) td:first-child, .contacts-tbl tbody tr:nth-child(even) td:last-child { background: #fafbfc; }
 .contacts-tbl th:first-child { background: var(--chrome); z-index: 2; }
 .contacts-tbl th:last-child, .contacts-tbl td:last-child {
   position: sticky; right: 0; z-index: 1; background: #ffffff; box-shadow: -1px 0 0 var(--border-lt);
 }
 .contacts-tbl th:last-child { background: var(--chrome); z-index: 2; }
-.contacts-tbl tr.selectable:hover td:first-child, .contacts-tbl tr.selectable:hover td:last-child { background: var(--teal-faint); }
+.contacts-tbl tbody tr:hover td:first-child, .contacts-tbl tbody tr:hover td:last-child { background: #f1f5f6; }
 .contacts-empty { padding: 32px 10px; text-align: center; color: var(--t4); font-size: 12px; }
 .reclassify-field input[type="text"], .reclassify-field input[type="email"] {
   width: 100%; box-sizing: border-box; border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; font-size: 12px;
@@ -199,8 +203,19 @@
 /* Read-only field grid (View popups) — same .reclassify-field/.contacts-
    field-grid shape as the editable form, just static text instead of an
    input, so View and Edit read as the same layout. */
-.patient-view-value { min-height: 29px; display: flex; align-items: center; font-size: 12px; color: var(--t1); padding: 4px 0; }
-.patient-view-flag { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--t2); font-weight: 500; }
+/* §10 — a plain label + floating text read as empty/unfinished; giving each
+   value its own light card (background + border, matching the same input
+   footprint the Edit form uses) gives the read-only grid actual visual
+   weight instead of looking like a blank form. */
+.patient-view-value {
+  min-height: 29px; display: flex; align-items: center; font-size: 12px; color: var(--t1);
+  padding: 6px 8px; box-sizing: border-box; background: var(--chrome); border: 1px solid var(--border-lt); border-radius: 6px;
+}
+.patient-view-flag {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; padding: 5px 10px; border-radius: 999px;
+}
+.patient-view-flag.on { background: var(--teal-faint); color: var(--teal); }
+.patient-view-flag.off { background: var(--chrome); color: var(--t4); }
 /* Linked Contacts/Providers/Cases sections inside the patient View popup. */
 .patient-linked-section { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border-lt); }
 .patient-linked-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }

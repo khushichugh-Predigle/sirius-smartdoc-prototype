@@ -47,7 +47,7 @@ window.PATIENTS = [
     drug: "Enbrel", dose: "50mg/mL", payer: "Aetna", plan: "Open Access", member: "AET40128877",
     allergies: "Sulfa drugs", vitals: { ht: "5' 5\"", wt: "134 lb", bmi: "22.3" },
     dx: "L40.50 — Psoriatic arthropathy, unspecified", rx: "Dr. Alan Whitfield", npi: "1932847561", clinic: "Northwest Dermatology Assoc.",
-    activeCases: 0, totalCases: 1, lastActivity: "06/02/2026", status: "Closed",
+    activeCases: 0, totalCases: 1, lastActivity: "06/02/2026", status: "Cancelled",
     cases: [
       { id: "CASE-09812", received: "06/02/2026", stage: 5, status: "Approved",
         drug: "Enbrel", dose: "50mg/mL", dx: "L40.50 — Psoriatic arthropathy", paReq: true, jcode: "J1438", frequency: "Weekly",
@@ -95,7 +95,7 @@ window.PATIENTS = [
     drug: "Remicade", dose: "100mg", payer: "Blue Cross Blue Shield IL", plan: "HMO Illinois", member: "BCB19203847",
     allergies: "NKDA", vitals: { ht: "5' 8\"", wt: "165 lb", bmi: "25.1" },
     dx: "K51.90 — Ulcerative colitis, unspecified", rx: "Dr. Marcus Webb", npi: "1602839471", clinic: "Fox Valley Gastroenterology",
-    activeCases: 0, totalCases: 2, lastActivity: "05/28/2026", status: "Closed",
+    activeCases: 0, totalCases: 2, lastActivity: "05/28/2026", status: "Inactive",
     cases: [
       { id: "CASE-09701", received: "05/28/2026", stage: 5, status: "Denied",
         drug: "Remicade", dose: "100mg", dx: "K51.90 — Ulcerative colitis", paReq: true, jcode: "J1745", frequency: "Every 8 weeks",
@@ -143,7 +143,7 @@ window.PATIENTS = [
     drug: "Tysabri", dose: "300mg/15mL", payer: "UnitedHealthcare", plan: "Choice", member: "UHC30294857",
     allergies: "Iodine contrast", vitals: { ht: "5' 4\"", wt: "126 lb", bmi: "21.6" },
     dx: "G35 — Multiple sclerosis", rx: "Dr. Priya Nair", npi: "1847293015", clinic: "Lakeshore Neurology Group",
-    activeCases: 0, totalCases: 1, lastActivity: "04/11/2026", status: "Closed",
+    activeCases: 0, totalCases: 1, lastActivity: "04/11/2026", status: "On Hold",
     cases: [
       { id: "CASE-09455", received: "04/11/2026", stage: 5, status: "Approved",
         drug: "Tysabri", dose: "300mg/15mL", dx: "G35 — Multiple sclerosis", paReq: true, jcode: "J2323", frequency: "Every 4 weeks",
@@ -191,7 +191,7 @@ window.PATIENTS = [
     drug: "Repatha", dose: "140mg/mL", payer: "Aetna", plan: "Open Access", member: "AET20938471",
     allergies: "NKDA", vitals: { ht: "5' 10\"", wt: "198 lb", bmi: "28.4" },
     dx: "E78.00 — Pure hypercholesterolemia, unspecified", rx: "Dr. Thomas Reyes", npi: "1683920475", clinic: "Northshore Cardiology Partners",
-    activeCases: 0, totalCases: 1, lastActivity: "03/02/2026", status: "Closed",
+    activeCases: 0, totalCases: 1, lastActivity: "03/02/2026", status: "Pending",
     cases: [
       { id: "CASE-09188", received: "03/02/2026", stage: 5, status: "Denied",
         drug: "Repatha", dose: "140mg/mL", dx: "E78.00 — Pure hypercholesterolemia", paReq: true, jcode: "J3590", frequency: "Every 2 weeks",
@@ -239,7 +239,7 @@ window.PATIENTS = [
     drug: "Actemra", dose: "162mg/0.9mL", payer: "Cigna", plan: "Open Access Plus", member: "CIG70293845",
     allergies: "NKDA", vitals: { ht: "5' 3\"", wt: "130 lb", bmi: "23.0" },
     dx: "M06.9 — Rheumatoid arthritis, unspecified", rx: "Dr. Alan Whitfield", npi: "1932847561", clinic: "Northwest Dermatology Assoc.",
-    activeCases: 0, totalCases: 1, lastActivity: "02/19/2026", status: "Closed",
+    activeCases: 0, totalCases: 1, lastActivity: "02/19/2026", status: "Cancelled",
     cases: [
       { id: "CASE-08974", received: "02/19/2026", stage: 5, status: "Approved",
         drug: "Actemra", dose: "162mg/0.9mL", dx: "M06.9 — Rheumatoid arthritis", paReq: true, jcode: "J3262", frequency: "Weekly",
@@ -287,7 +287,7 @@ window.PATIENTS = [
     drug: "Keytruda", dose: "100mg/4mL", payer: "Aetna", plan: "Select HMO", member: "AET60293847",
     allergies: "NKDA", vitals: { ht: "5' 8\"", wt: "168 lb", bmi: "25.5" },
     dx: "C34.90 — Malignant neoplasm of lung, unspecified", rx: "Dr. Katherine Ruiz", npi: "1719283045", clinic: "Midwest Retina Institute",
-    activeCases: 0, totalCases: 2, lastActivity: "01/08/2026", status: "Closed",
+    activeCases: 0, totalCases: 2, lastActivity: "01/08/2026", status: "Inactive",
     cases: [
       { id: "CASE-08702", received: "01/08/2026", stage: 5, status: "Approved",
         drug: "Keytruda", dose: "100mg/4mL", dx: "C34.90 — Malignant neoplasm of lung", paReq: true, jcode: "J9271", frequency: "Every 3 weeks",

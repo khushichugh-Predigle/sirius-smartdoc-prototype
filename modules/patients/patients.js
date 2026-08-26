@@ -7,12 +7,19 @@
  * exists in css/document-detail.css, css/table.css and css/custom-select.css.
  */
 (function () {
-  const STATUSES = ['Active', 'Closed'];
+  const STATUSES = ['Active', 'Cancelled', 'Inactive', 'On Hold', 'Pending'];
+  // Same chip system as Document Intake's .bdg badges — colors per §1:
+  // Active=green(ok), Cancelled=red(err), Inactive=grey(gray),
+  // On Hold=yellow(warn), Pending=blue(info).
+  const STATUS_BDG_CLASS = { Active: 'ok', Cancelled: 'err', Inactive: 'gray', 'On Hold': 'warn', Pending: 'info' };
+  function statusBdg(status) {
+    return `<span class="bdg ${STATUS_BDG_CLASS[status] || 'gray'}">${esc(status)}</span>`;
+  }
 
   const state = {
     search: '', statusFilter: '', sortCol: 'name', sortAsc: true, editingId: null, formValues: {}, deleteId: null,
     filterOpen: false, payerFilter: [], createdFrom: '', createdTo: '', updatedFrom: '', updatedTo: '',
-    viewingId: null, editingProviderId: null,
+    viewingId: null, editingProviderId: null, linkedRefresh: null,
   };
 
   function activeFilterCount() {
@@ -26,6 +33,11 @@
   function dayMs(dateStr) { return dateStr ? new Date(dateStr + 'T00:00:00').getTime() : null; }
 
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+  // §2/§5 — display the bare MRN value everywhere (e.g. "395210"), not the
+  // "MRN-395210" internal id string. The underlying data/sort/search still
+  // use the full mrn field; only rendering is stripped.
+  function mrnDisplay(mrn) { return (mrn || '').replace(/^MRN-/i, ''); }
 
   function getPatients() {
     const del = window._deletedPatients || (window._deletedPatients = new Set());
@@ -102,7 +114,7 @@
       const audit = AuditStamp.stampFor(p.mrn || p.name);
       return `
       <tr class="selectable" data-view-id="${p.id}">
-        <td class="mono" style="color:var(--t3)">${esc(p.mrn)}</td>
+        <td class="mono" style="color:var(--t3)">${esc(mrnDisplay(p.mrn))}</td>
         <td><b>${esc(p.name)}</b></td>
         <td class="mono">${esc(p.dob)}${p.sex ? ` · ${esc(p.sex)}` : ''}</td>
         <td>${esc(p.phone || '—')}</td>
@@ -110,7 +122,7 @@
         <td>${esc(p.payer || '—')}</td>
         <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis">${esc(p.dx || '—')}</td>
         <td>${p.activeCases > 0 ? `<span class="bdg info"><span class="d"></span>${p.activeCases}</span>` : `<span class="bdg gray"><span class="d"></span>0</span>`}</td>
-        <td>${p.status === 'Active' ? '<span class="bdg ok"><span class="d"></span>Active</span>' : '<span class="bdg gray"><span class="d"></span>Closed</span>'}</td>
+        <td>${statusBdg(p.status)}</td>
         <td>${esc(audit.createdOn)}</td>
         <td>${esc(audit.updatedOn)}<span style="color:var(--t4);font-size:10.5px"> by ${esc(audit.updatedBy)}</span></td>
         <td>
@@ -282,7 +294,10 @@
       status: p.status,
     };
     document.getElementById('patientFormTitle').textContent = isNew ? 'Add New Patient' : 'Edit Patient';
-    document.getElementById('patientFormBody').innerHTML = patientFormMarkup(values);
+    // §9 — linked Contacts/Providers/Cases show in Edit too, not just View.
+    // Only meaningful once the patient actually exists (a brand-new,
+    // unsaved patient has nothing to link against yet).
+    document.getElementById('patientFormBody').innerHTML = patientFormMarkup(values) + (isNew ? '' : linkedSectionsMarkup(p));
     document.getElementById('patientFormFoot').innerHTML = `
       <button class="btn" type="button" id="patientFormCancelBtn">Cancel</button>
       <button class="btn primary" type="button" id="patientFormSaveBtn">${isNew ? 'Create' : 'Save changes'}</button>
@@ -292,6 +307,7 @@
       value: values.status || 'Active', placeholder: 'Select status…', ariaLabel: 'Status',
       onChange: (v) => { document.getElementById('patientStatusValue').value = v; },
     });
+    if (!isNew) wireLinkedSections(p, document.getElementById('patientFormBody'), () => openForm(id));
     document.getElementById('patientFormCancelBtn').addEventListener('click', closeForm);
     document.getElementById('patientFormSaveBtn').addEventListener('click', saveForm);
     document.getElementById('patientFormOverlay').style.display = 'flex';
@@ -456,25 +472,31 @@
     `;
   }
 
-  function openView(id) {
-    const p = getPatients().find((x) => x.id === id);
-    if (!p) return;
-    state.viewingId = id;
-    document.getElementById('patientViewTitle').innerHTML = `${esc(p.name)} <span class="mono" style="font-size:10.5px;font-weight:500;color:var(--t3);margin-left:6px">${esc(p.mrn)}</span>`;
-    document.getElementById('patientViewBody').innerHTML = `
-      ${patientViewFieldsMarkup(p)}
+  function linkedSectionsMarkup(p) {
+    return `
       <div class="patient-linked-section">${linkedContactsMarkup(p)}</div>
       <div class="patient-linked-section">${linkedProvidersMarkup(p)}</div>
       <div class="patient-linked-section">${casesMarkup(p)}</div>
     `;
-    wireViewSections(p);
+  }
+
+  function openView(id) {
+    const p = getPatients().find((x) => x.id === id);
+    if (!p) return;
+    state.viewingId = id;
+    document.getElementById('patientViewTitle').innerHTML = `${esc(p.name)} <span class="mono" style="font-size:10.5px;font-weight:500;color:var(--t3);margin-left:6px">${esc(mrnDisplay(p.mrn))}</span>`;
+    document.getElementById('patientViewBody').innerHTML = `${patientViewFieldsMarkup(p)}${linkedSectionsMarkup(p)}`;
+    wireLinkedSections(p, document.getElementById('patientViewBody'), () => openView(id));
     document.getElementById('patientViewEditBtn').onclick = () => { closeView(); openForm(id); };
     document.getElementById('patientViewOverlay').style.display = 'flex';
   }
   function closeView() { document.getElementById('patientViewOverlay').style.display = 'none'; }
 
-  function wireViewSections(p) {
-    const body = document.getElementById('patientViewBody');
+  // Reusable from both the View popup and the Edit form (§9) — same
+  // Contacts/Providers/Cases sections, same link/unlink behavior, wherever
+  // they're rendered. `refresh` re-renders whichever surface called this.
+  function wireLinkedSections(p, body, refresh) {
+    state.linkedRefresh = refresh;
     body.querySelectorAll('[data-open-contact]').forEach((tr) => tr.addEventListener('click', (e) => {
       if (e.target.closest('[data-unlink-contact]')) return;
       window.ContactEditor.openView(tr.dataset.openContact);
@@ -482,7 +504,7 @@
     body.querySelectorAll('[data-unlink-contact]').forEach((btn) => btn.addEventListener('click', (e) => {
       e.stopPropagation();
       p.contactIds = (p.contactIds || []).filter((id) => id !== btn.dataset.unlinkContact);
-      openView(p.id);
+      refresh();
       toast('Contact unlinked from this patient');
     }));
     body.querySelectorAll('[data-link-contact]').forEach((btn) => btn.addEventListener('click', () => openLinkContact(p.id)));
@@ -494,7 +516,7 @@
     body.querySelectorAll('[data-unlink-provider]').forEach((btn) => btn.addEventListener('click', (e) => {
       e.stopPropagation();
       p.providerIds = (p.providerIds || []).filter((id) => id !== btn.dataset.unlinkProvider);
-      openView(p.id);
+      refresh();
       toast('Provider unlinked from this patient');
     }));
     body.querySelectorAll('[data-link-provider]').forEach((btn) => btn.addEventListener('click', () => openLinkProvider(p.id)));
@@ -530,7 +552,7 @@
         e.stopPropagation();
         p.contactIds = (p.contactIds || []).concat([btn.dataset.pickContactBtn]);
         closeLinkContact();
-        openView(patientId);
+        (state.linkedRefresh || (() => openView(patientId)))();
         toast('Contact linked to this patient');
       }));
     };
@@ -574,7 +596,7 @@
         e.stopPropagation();
         p.providerIds = (p.providerIds || []).concat([btn.dataset.pickProviderBtn]);
         closeLinkProvider();
-        openView(patientId);
+        (state.linkedRefresh || (() => openView(patientId)))();
         toast('Provider linked to this patient');
       }));
     };
@@ -652,8 +674,8 @@
       toast('Provider updated');
     }
     closeProviderForm();
-    if (providerFormLinkPatientId) openView(providerFormLinkPatientId);
-    else if (state.viewingId) openView(state.viewingId);
+    if (state.linkedRefresh) state.linkedRefresh();
+    else if (providerFormLinkPatientId) openView(providerFormLinkPatientId);
   }
 
   function openDeleteConfirm(id) {
