@@ -1044,7 +1044,7 @@
 
   const PROVIDER_ORIGIN_BADGE = {
     extracted: { cls: 'origin-extracted', text: 'Extracted' },
-    cpr: { cls: 'origin-cpr', text: 'From Record' },
+    cpr: { cls: 'origin-cpr', text: 'Attached' },
     draft: { cls: 'origin-draft', text: 'New' },
   };
 
@@ -1110,7 +1110,7 @@
         </div>
         <span class="provider-card-actions">
           ${searchBtn}
-          ${state.providers.length > 1 ? `<button type="button" class="provider-remove" data-provider-remove="${p.uid}" title="Unlink from this patient" ${locked ? 'disabled' : ''}>Unlink</button>` : ''}
+          ${state.providers.length > 1 ? `<button type="button" class="provider-remove" data-provider-remove="${p.uid}" title="Remove from this patient" ${locked ? 'disabled' : ''}>Remove</button>` : ''}
         </span>
         <span class="subsection-chevron"></span>
       </div>
@@ -1293,7 +1293,7 @@
     syncPrescribedProvider();
     toast(p.origin === 'draft'
       ? `${providerName(p)} discarded — was never created in records`
-      : `${providerName(p)} unlinked from this patient (still in records)`);
+      : `${providerName(p)} removed from this patient (still in records)`);
   }
 
   function addProviderFromRecord(record, origin, cprId) {
@@ -2176,7 +2176,7 @@
               <td>
                 <div class="contact-row-actions">
                   <button type="button" data-prov-edit="${r.id}" title="Edit provider" aria-label="Edit provider">${ICON_EDIT}</button>
-                  <button type="button" class="danger" data-prov-unlink="${r.id}" title="${linked ? 'Unlink from this patient' : 'Not linked to this patient'}" aria-label="Unlink provider" ${linked ? '' : 'disabled'}>${ICON_DELETE}</button>
+                  <button type="button" class="danger" data-prov-unlink="${r.id}" title="${linked ? 'Remove from this patient' : 'Not attached to this patient'}" aria-label="Remove provider" ${linked ? '' : 'disabled'}>${ICON_DELETE}</button>
                 </div>
               </td>
             </tr>`;
@@ -2370,9 +2370,9 @@
 
     const editingId = state.providerFormEditingId;
     if (editingId) {
-      // Editing an on-file record updates it for everyone, same as editing a
-      // linked "From Record" card (§9's shared-record warning covers that
-      // case; this is the same write, just reached from the list).
+      // Editing an on-file record updates it for everyone, same as editing an
+      // "Attached" card (§9's shared-record warning covers that case; this
+      // is the same write, just reached from the list).
       const rec = CPR_PRESCRIBERS.find((r) => r.id === editingId);
       if (rec) {
         Object.keys(PROVIDER_RECORD_MAP).forEach((label) => {
