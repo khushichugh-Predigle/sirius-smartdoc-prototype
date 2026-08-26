@@ -157,7 +157,7 @@
       hit = lookupPatient(PATIENT_INFO_MAP[label]);
     } else if (ctx.section === 'Patient Demographics' && ctx.subsection === 'Miscellaneous' && MISC_MAP[label]) {
       hit = lookupPatient(MISC_MAP[label]);
-    } else if (ctx.subsection === 'Prescriber' && PRESCRIBER_MAP[label]) {
+    } else if (ctx.subsection === 'Provider' && PRESCRIBER_MAP[label]) {
       hit = lookupProvider(PRESCRIBER_MAP[label]);
     } else if (ctx.subsection === 'Organization' && ORG_MAP[label]) {
       hit = lookupProvider(ORG_MAP[label]);
@@ -669,7 +669,7 @@
   function pickProviderListRow(id) {
     if (state.providerSearchMode !== 'add') { selectProviderMatch(id); return; }
     if (providerAlreadyLinked(id)) {
-      toast('This prescriber is already assigned to this patient — no changes will be made');
+      toast('This provider is already assigned to this patient — no changes will be made');
       return;
     }
     const rec = CPR_PRESCRIBERS.find((r) => r.id === id);
@@ -727,7 +727,7 @@
       renumberProviders();
       renderForm();
       syncPrescribedProvider();
-      toast('This prescriber is already assigned to this patient — no changes will be made');
+      toast('This provider is already assigned to this patient — no changes will be made');
       return;
     }
     const p = populateExtractedProviderFromRecord(rec);
@@ -751,7 +751,7 @@
     const headerInner = selected && selected !== 'new'
       ? `<span class="match-selected-summary"><span class="match-selected-main"><span class="match-selected-name">${escapeHtml(selected.first_name + ' ' + selected.last_name)}</span><span class="match-selected-meta">${escapeHtml(selected.specialty + ' · ' + selected.organization)}</span></span></span>`
       : selected === 'new'
-        ? `<span class="match-selected-summary create-new"><span class="match-selected-main"><span class="match-selected-name">New prescriber record</span></span></span>`
+        ? `<span class="match-selected-summary create-new"><span class="match-selected-main"><span class="match-selected-name">New provider record</span></span></span>`
         : `<span class="match-tt"><span class="match-t1">${title}</span><span class="match-t2">${subtitle}</span></span>`;
 
     wrap.innerHTML = `
@@ -793,7 +793,7 @@
           const p = state.providers.find((x) => x.isExtractedSlot);
           if (p) { p.origin = 'draft'; p.cprId = null; }
           renderForm();
-          toast('New prescriber will be created on Save & Submit');
+          toast('New provider will be created on Save & Submit');
           return;
         }
         selectProviderMatch(id);
@@ -1058,7 +1058,7 @@
     const locked = cs.isReadOnly && !cs.isGated;
     const body = (p.sub.subsections || []).map((c) => subsectionMarkup(c, 1)).join('');
     const sharedWarning = p.origin === 'cpr' && p.edited
-      ? `<div class="provider-shared-warning">Editing this prescriber updates the shared record for every patient linked to it.</div>`
+      ? `<div class="provider-shared-warning">Editing this provider updates the shared record for every patient linked to it.</div>`
       : '';
       
     let matchHeader = '';
@@ -1083,11 +1083,11 @@
         subtitleText = `${selected.first_name} ${selected.last_name} · ${selected.specialty} · ${selected.organization}`;
         subtitleCls = '';
       } else if (selected === 'new') {
-        subtitleText = 'New prescriber record';
+        subtitleText = 'New provider record';
         subtitleCls = '';
       } else {
         const cLen = cands.length;
-        subtitleText = cLen === 0 ? 'No record found' : `${cLen} match${cLen === 1 ? '' : 'es'} found — select one`;
+        subtitleText = cLen === 0 ? 'No record found' : `${cLen} Match${cLen === 1 ? '' : 'es'} found - Select one`;
         subtitleCls = ' provider-match-subtitle-live';
       }
       matchHeader = `<button type="button" class="provider-match-subtitle${subtitleCls}" data-provider-match-open="${p.uid}" ${locked ? 'disabled' : ''}>${escapeHtml(subtitleText)}</button>`;
@@ -1104,7 +1104,7 @@
         <div style="display:flex; flex-direction:column; margin-right:auto; gap:2px;">
           <div style="display:flex; align-items:center; gap:8px;">
             <span class="provider-card-title">${escapeHtml(providerName(p))}</span>
-            <span class="provider-origin ${badge.cls}">${badge.text}</span>
+            ${p.origin === 'cpr' ? '' : `<span class="provider-origin ${badge.cls}">${badge.text}</span>`}
           </div>
           ${matchHeader}
         </div>
@@ -1510,6 +1510,10 @@
 
   const ICON_EDIT = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 20h9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const ICON_DELETE = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  // Distinct from ICON_DELETE (permanent delete, used by Contacts) — this one
+  // reads as "detach", matching what the button actually does: unlink a
+  // provider from this patient without touching the record itself.
+  const ICON_UNLINK = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9 15l6-6M10 6.5l1-1a3.5 3.5 0 015 5l-1 1M14 17.5l-1 1a3.5 3.5 0 01-5-5l1-1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
   function contactsListMarkup() {
     const rows = contactsFiltered();
@@ -2070,7 +2074,7 @@
   }
 
   function providerModalTitleText() {
-    if (state.providerSearchView === 'form') return state.providerFormEditingId ? 'Edit Provider' : 'Add New Prescriber';
+    if (state.providerSearchView === 'form') return state.providerFormEditingId ? 'Edit Provider' : 'Add New Provider';
     return state.providerSearchMode === 'add' ? 'Add Provider' : 'Match Provider';
   }
 
@@ -2153,9 +2157,9 @@
       <div class="contacts-toolbar">
         <input type="search" id="providerSearchInput" placeholder="Search providers by name, specialty, organization, NPI…" value="${escapeHtml(state.providerSearchQuery || '')}" />
         <div class="contacts-org-filter" id="providerSearchSpecialtySelect"></div>
-        <button type="button" class="btn primary" id="providerSearchAddNewBtn">+ Add New</button>
+        <button type="button" class="btn primary" id="providerSearchAddNewBtn">Create New</button>
       </div>
-      ${restrictToMatches ? `<div class="contacts-empty" style="padding:0 0 10px;text-align:left;color:var(--t3);font-size:11px">Showing ${rows.length} match${rows.length === 1 ? '' : 'es'} for the extracted prescriber. Search to see every provider.</div>` : ''}
+      ${restrictToMatches ? `<div class="contacts-empty" style="padding:0 0 10px;text-align:left;color:var(--t3);font-size:11px">Showing ${rows.length} match${rows.length === 1 ? '' : 'es'} for the extracted provider. Search to see every provider.</div>` : ''}
       ${rows.length ? `<div class="gridwrap" style="overflow-x:auto;border:1px solid var(--border-lt);border-radius:8px"><table class="contacts-tbl"><thead><tr>
           ${providerSearchSortHeader('name', 'NAME')}
           ${providerSearchSortHeader('specialty', 'SPECIALTY')}
@@ -2176,7 +2180,7 @@
               <td>
                 <div class="contact-row-actions">
                   <button type="button" data-prov-edit="${r.id}" title="Edit provider" aria-label="Edit provider">${ICON_EDIT}</button>
-                  <button type="button" class="danger" data-prov-unlink="${r.id}" title="${linked ? 'Remove from this patient' : 'Not attached to this patient'}" aria-label="Remove provider" ${linked ? '' : 'disabled'}>${ICON_DELETE}</button>
+                  <button type="button" class="danger" data-prov-unlink="${r.id}" title="${linked ? 'Remove from this patient' : 'Not attached to this patient'}" aria-label="Remove provider" ${linked ? '' : 'disabled'}>${ICON_UNLINK}</button>
                 </div>
               </td>
             </tr>`;
@@ -2424,7 +2428,7 @@
     closeProviderSearch();
     renderForm();
     syncPrescribedProvider();
-    toast(editingId ? 'Prescriber record updated and linked to this patient' : 'New prescriber added — will be created in records on Save & Submit');
+    toast(editingId ? 'Provider record updated and linked to this patient' : 'New provider added — will be created in records on Save & Submit');
   }
 
   // Hook into wireModals
@@ -2482,7 +2486,7 @@ function wireModals() {
       const newDrafts = state.providers.filter((p) => p.origin === 'draft');
       const updatedCpr = state.providers.filter((p) => p.origin === 'cpr' && p.edited);
       const provMsgs = [];
-      if (newDrafts.length) provMsgs.push(`${newDrafts.length} new prescriber record${newDrafts.length > 1 ? 's' : ''} created in records`);
+      if (newDrafts.length) provMsgs.push(`${newDrafts.length} new provider record${newDrafts.length > 1 ? 's' : ''} created in records`);
       if (updatedCpr.length) provMsgs.push(`${updatedCpr.length} shared record${updatedCpr.length > 1 ? 's' : ''} updated`);
       // Promote drafts to cpr on submit (they now exist in records).
       newDrafts.forEach((p) => { p.origin = 'cpr'; });

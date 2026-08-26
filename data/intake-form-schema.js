@@ -2478,7 +2478,7 @@ window.INTAKE_FORM_SCHEMA = {
           "subsections": [
             {
               "id": "3bea65ea-c18b-4ace-9f1e-c308c5ade51a",
-              "title": "Prescriber",
+              "title": "Provider",
               "description": "",
               "order": 1,
               "icon": "",
