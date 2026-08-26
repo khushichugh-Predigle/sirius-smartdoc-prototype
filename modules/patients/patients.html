@@ -207,6 +207,21 @@
   </div>
 </div>
 
+<!-- View patient (read-only) + linked Contacts/Providers/Cases -->
+<div class="reclassify-overlay" id="patientViewOverlay" style="display:none">
+  <div class="reclassify-modal wide" role="dialog" aria-modal="true">
+    <div class="reclassify-head">
+      <h3 id="patientViewTitle">Patient</h3>
+      <button type="button" class="reclassify-close" id="patientViewCloseBtn" aria-label="Close">&times;</button>
+    </div>
+    <div class="reclassify-body" id="patientViewBody"></div>
+    <div class="reclassify-foot">
+      <button class="btn" type="button" id="patientViewCloseBtn2">Close</button>
+      <button class="btn primary" type="button" id="patientViewEditBtn"><span data-ic="edit"></span> Edit</button>
+    </div>
+  </div>
+</div>
+
 <!-- Add/Edit patient modal -->
 <div class="reclassify-overlay" id="patientFormOverlay" style="display:none">
   <div class="reclassify-modal wide" role="dialog" aria-modal="true">
@@ -235,10 +250,88 @@
   </div>
 </div>
 
+<!-- Add/Edit provider modal (lightweight — flat provider record, no nested
+     License Info/Contacts subsections like Document Detail's richer form) -->
+<div class="reclassify-overlay" id="providerFormOverlay" style="display:none">
+  <div class="reclassify-modal wide" role="dialog" aria-modal="true">
+    <div class="reclassify-head">
+      <h3 id="providerFormTitle">Add New Provider</h3>
+      <button type="button" class="reclassify-close" id="providerFormCloseBtn" aria-label="Close">&times;</button>
+    </div>
+    <div class="reclassify-body" id="providerFormBody"></div>
+    <div class="reclassify-foot" id="providerFormFoot"></div>
+  </div>
+</div>
+
+<!-- Link existing contact to this patient -->
+<div class="reclassify-overlay" id="linkContactOverlay" style="display:none">
+  <div class="reclassify-modal wide" role="dialog" aria-modal="true">
+    <div class="reclassify-head">
+      <h3>Link Contact</h3>
+      <button type="button" class="reclassify-close" id="linkContactCloseBtn" aria-label="Close">&times;</button>
+    </div>
+    <div class="reclassify-body" id="linkContactBody"></div>
+  </div>
+</div>
+
+<!-- Link existing provider to this patient -->
+<div class="reclassify-overlay" id="linkProviderOverlay" style="display:none">
+  <div class="reclassify-modal wide" role="dialog" aria-modal="true">
+    <div class="reclassify-head">
+      <h3>Link Provider</h3>
+      <button type="button" class="reclassify-close" id="linkProviderCloseBtn" aria-label="Close">&times;</button>
+    </div>
+    <div class="reclassify-body" id="linkProviderBody"></div>
+  </div>
+</div>
+
+<!-- Contacts module's own View/Add/Edit/Delete modals — reused as-is so a
+     linked contact opens the exact same modal Contacts itself uses. -->
+<div class="reclassify-overlay" id="contactViewOverlay" style="display:none">
+  <div class="reclassify-modal wide" role="dialog" aria-modal="true">
+    <div class="reclassify-head">
+      <h3 id="contactViewTitle">Contact</h3>
+      <button type="button" class="reclassify-close" id="contactViewCloseBtn" aria-label="Close">&times;</button>
+    </div>
+    <div class="reclassify-body" id="contactViewBody"></div>
+    <div class="reclassify-foot">
+      <button class="btn" type="button" onclick="ContactEditor.closeView()">Close</button>
+      <button class="btn primary" type="button" id="contactViewEditBtn"><span data-ic="edit"></span> Edit</button>
+    </div>
+  </div>
+</div>
+<div class="reclassify-overlay" id="contactFormOverlay" style="display:none">
+  <div class="reclassify-modal wide" role="dialog" aria-modal="true">
+    <div class="reclassify-head">
+      <h3 id="contactFormTitle">Add New Contact</h3>
+      <button type="button" class="reclassify-close" id="contactFormCloseBtn" aria-label="Close">&times;</button>
+    </div>
+    <div class="reclassify-body" id="contactFormBody"></div>
+    <div class="reclassify-foot" id="contactFormFoot"></div>
+  </div>
+</div>
+<div class="reclassify-overlay" id="deleteContactOverlay" style="display:none">
+  <div class="reclassify-modal" role="dialog" aria-modal="true">
+    <div class="reclassify-head"><h3>Delete Contact</h3>
+      <button type="button" class="reclassify-close" id="deleteContactCloseBtn" aria-label="Close">&times;</button>
+    </div>
+    <div class="reclassify-body">
+      <p class="reject-lead">Delete <b id="deleteContactName"></b>? This cannot be undone.</p>
+    </div>
+    <div class="reclassify-foot">
+      <button class="btn" type="button" id="deleteContactCancelBtn">Cancel</button>
+      <button class="btn danger" type="button" id="deleteContactConfirmBtn">Delete</button>
+    </div>
+  </div>
+</div>
+
 <script src="../../js/custom-select.js"></script>
 <script src="../../js/icons.js"></script>
 <script src="../../js/shell.js"></script>
 <script src="../../js/audit.js"></script>
+<script src="../../data/contacts.js"></script>
+<script src="../../data/providers-data.js"></script>
+<script src="../contacts/contacts.js"></script>
 <script src="../../data/patients-data.js"></script>
 <script src="patients.js"></script>
 </body>

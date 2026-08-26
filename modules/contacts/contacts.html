@@ -207,6 +207,21 @@
   </div>
 </div>
 
+<!-- View contact (read-only) -->
+<div class="reclassify-overlay" id="contactViewOverlay" style="display:none">
+  <div class="reclassify-modal wide" role="dialog" aria-modal="true">
+    <div class="reclassify-head">
+      <h3 id="contactViewTitle">Contact</h3>
+      <button type="button" class="reclassify-close" id="contactViewCloseBtn" aria-label="Close">&times;</button>
+    </div>
+    <div class="reclassify-body" id="contactViewBody"></div>
+    <div class="reclassify-foot">
+      <button class="btn" type="button" onclick="ContactEditor.closeView()">Close</button>
+      <button class="btn primary" type="button" id="contactViewEditBtn"><span data-ic="edit"></span> Edit</button>
+    </div>
+  </div>
+</div>
+
 <!-- Add/Edit contact modal -->
 <div class="reclassify-overlay" id="contactFormOverlay" style="display:none">
   <div class="reclassify-modal wide" role="dialog" aria-modal="true">

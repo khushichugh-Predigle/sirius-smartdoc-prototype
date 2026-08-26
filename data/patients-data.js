@@ -9,7 +9,7 @@
  */
 window.PATIENTS = [
   {
-    id: "PT-000001", mrn: "MRN-482910", name: "Maria Gonzalez", dob: "04/12/1978", sex: "F",
+    id: "PT-000001", mrn: "MRN-482910", contactIds: ["ct-001", "ct-006"], providerIds: ["Pr1"], name: "Maria Gonzalez", dob: "04/12/1978", sex: "F",
     phone: "(312) 555-0148", email: "maria.gonzalez@email.com", lang: "Spanish",
     address: "742 Evergreen Terrace, Chicago, IL 60601", city: "Chicago", state: "IL", zip: "60601",
     drug: "Humira", dose: "40mg/0.4mL", payer: "Blue Cross Blue Shield IL", plan: "PPO Gold", member: "BCB88213940",
@@ -25,7 +25,7 @@ window.PATIENTS = [
     ],
   },
   {
-    id: "PT-000002", mrn: "MRN-193004", name: "James Okafor", dob: "11/02/1965", sex: "M",
+    id: "PT-000002", mrn: "MRN-193004", contactIds: ["ct-002", "ct-007"], providerIds: ["Pr2"], name: "James Okafor", dob: "11/02/1965", sex: "M",
     phone: "(773) 555-0231", email: "james.okafor@email.com", lang: "English",
     address: "18 Willow Ave, Evanston, IL 60201", city: "Evanston", state: "IL", zip: "60201",
     drug: "Ocrevus", dose: "600mg/10mL", payer: "UnitedHealthcare", plan: "Choice Plus", member: "UHC77102938",
@@ -41,7 +41,7 @@ window.PATIENTS = [
     ],
   },
   {
-    id: "PT-000003", mrn: "MRN-627183", name: "Linda Chen", dob: "07/25/1990", sex: "F",
+    id: "PT-000003", mrn: "MRN-627183", contactIds: ["ct-003", "ct-008"], providerIds: ["Pr3"], name: "Linda Chen", dob: "07/25/1990", sex: "F",
     phone: "(630) 555-0119", email: "linda.chen@email.com", lang: "Mandarin",
     address: "905 Oak Park Blvd, Naperville, IL 60540", city: "Naperville", state: "IL", zip: "60540",
     drug: "Enbrel", dose: "50mg/mL", payer: "Aetna", plan: "Open Access", member: "AET40128877",
@@ -57,7 +57,7 @@ window.PATIENTS = [
     ],
   },
   {
-    id: "PT-000004", mrn: "MRN-350892", name: "Robert Silva", dob: "02/14/1954", sex: "M",
+    id: "PT-000004", mrn: "MRN-350892", contactIds: ["ct-004", "ct-009"], providerIds: ["Pr4"], name: "Robert Silva", dob: "02/14/1954", sex: "M",
     phone: "(224) 555-0176", email: "robert.silva@email.com", lang: "English",
     address: "44 Birchwood Dr, Skokie, IL 60076", city: "Skokie", state: "IL", zip: "60076",
     drug: "Prolia", dose: "60mg/mL", payer: "Medicare Part B", plan: "Original Medicare", member: "MCR20194857",
@@ -73,7 +73,7 @@ window.PATIENTS = [
     ],
   },
   {
-    id: "PT-000005", mrn: "MRN-771205", name: "Ayesha Rahman", dob: "09/30/1988", sex: "F",
+    id: "PT-000005", mrn: "MRN-771205", contactIds: ["ct-005", "ct-010"], providerIds: ["Pr5"], name: "Ayesha Rahman", dob: "09/30/1988", sex: "F",
     phone: "(847) 555-0263", email: "ayesha.rahman@email.com", lang: "English",
     address: "212 Maple St, Arlington Heights, IL 60004", city: "Arlington Heights", state: "IL", zip: "60004",
     drug: "Stelara", dose: "90mg/mL", payer: "Cigna", plan: "Open Access Plus", member: "CIG60218834",
@@ -89,7 +89,7 @@ window.PATIENTS = [
     ],
   },
   {
-    id: "PT-000006", mrn: "MRN-905611", name: "Thomas Nguyen", dob: "12/08/1972", sex: "M",
+    id: "PT-000006", mrn: "MRN-905611", contactIds: ["ct-006", "ct-011"], providerIds: ["Pr6"], name: "Thomas Nguyen", dob: "12/08/1972", sex: "M",
     phone: "(312) 555-0387", email: "thomas.nguyen@email.com", lang: "Vietnamese",
     address: "1180 Halsted St, Chicago, IL 60607", city: "Chicago", state: "IL", zip: "60607",
     drug: "Remicade", dose: "100mg", payer: "Blue Cross Blue Shield IL", plan: "HMO Illinois", member: "BCB19203847",
@@ -105,7 +105,7 @@ window.PATIENTS = [
     ],
   },
   {
-    id: "PT-000007", mrn: "MRN-238475", name: "Patricia Adeyemi", dob: "03/17/1959", sex: "F",
+    id: "PT-000007", mrn: "MRN-238475", contactIds: ["ct-007", "ct-012"], providerIds: ["Pr7"], name: "Patricia Adeyemi", dob: "03/17/1959", sex: "F",
     phone: "(708) 555-0142", email: "patricia.adeyemi@email.com", lang: "English",
     address: "77 Elm Ct, Oak Lawn, IL 60453", city: "Oak Lawn", state: "IL", zip: "60453",
     drug: "Xolair", dose: "150mg/mL", payer: "Humana", plan: "Gold Plus HMO", member: "HUM50293811",
@@ -121,7 +121,7 @@ window.PATIENTS = [
     ],
   },
   {
-    id: "PT-000008", mrn: "MRN-461029", name: "Daniel Kowalski", dob: "06/21/1980", sex: "M",
+    id: "PT-000008", mrn: "MRN-461029", contactIds: ["ct-008", "ct-013"], providerIds: ["Pr8"], name: "Daniel Kowalski", dob: "06/21/1980", sex: "M",
     phone: "(312) 555-0455", email: "daniel.kowalski@email.com", lang: "Polish",
     address: "3021 Belmont Ave, Chicago, IL 60618", city: "Chicago", state: "IL", zip: "60618",
     drug: "Cosentyx", dose: "150mg/mL", payer: "Aetna", plan: "Select HMO", member: "AET91203845",
@@ -137,7 +137,7 @@ window.PATIENTS = [
     ],
   },
   {
-    id: "PT-000009", mrn: "MRN-582917", name: "Emily Sokolova", dob: "10/05/1995", sex: "F",
+    id: "PT-000009", mrn: "MRN-582917", contactIds: ["ct-009", "ct-014"], providerIds: ["Pr9"], name: "Emily Sokolova", dob: "10/05/1995", sex: "F",
     phone: "(773) 555-0521", email: "emily.sokolova@email.com", lang: "Russian",
     address: "509 Damen Ave, Chicago, IL 60622", city: "Chicago", state: "IL", zip: "60622",
     drug: "Tysabri", dose: "300mg/15mL", payer: "UnitedHealthcare", plan: "Choice", member: "UHC30294857",
@@ -153,7 +153,7 @@ window.PATIENTS = [
     ],
   },
   {
-    id: "PT-000010", mrn: "MRN-704158", name: "George Papadopoulos", dob: "01/29/1948", sex: "M",
+    id: "PT-000010", mrn: "MRN-704158", contactIds: ["ct-010", "ct-015"], providerIds: ["Pr10"], name: "George Papadopoulos", dob: "01/29/1948", sex: "M",
     phone: "(847) 555-0398", email: "george.papadopoulos@email.com", lang: "Greek",
     address: "618 Golf Rd, Niles, IL 60714", city: "Niles", state: "IL", zip: "60714",
     drug: "Eylea", dose: "2mg/0.05mL", payer: "Medicare Part B", plan: "Original Medicare", member: "MCR58203941",
@@ -169,7 +169,7 @@ window.PATIENTS = [
     ],
   },
   {
-    id: "PT-000011", mrn: "MRN-829461", name: "Sofia Marchetti", dob: "05/19/1983", sex: "F",
+    id: "PT-000011", mrn: "MRN-829461", contactIds: ["ct-011", "ct-016"], providerIds: ["Pr1"], name: "Sofia Marchetti", dob: "05/19/1983", sex: "F",
     phone: "(630) 555-0267", email: "sofia.marchetti@email.com", lang: "Italian",
     address: "88 Fairview Ln, Downers Grove, IL 60515", city: "Downers Grove", state: "IL", zip: "60515",
     drug: "Simponi Aria", dose: "50mg/4mL", payer: "Cigna", plan: "LocalPlus", member: "CIG40295817",
@@ -185,7 +185,7 @@ window.PATIENTS = [
     ],
   },
   {
-    id: "PT-000012", mrn: "MRN-916203", name: "Kevin O'Brien", dob: "08/03/1967", sex: "M",
+    id: "PT-000012", mrn: "MRN-916203", contactIds: ["ct-012", "ct-001"], providerIds: ["Pr2"], name: "Kevin O'Brien", dob: "08/03/1967", sex: "M",
     phone: "(773) 555-0619", email: "kevin.obrien@email.com", lang: "English",
     address: "241 Sheridan Rd, Wilmette, IL 60091", city: "Wilmette", state: "IL", zip: "60091",
     drug: "Repatha", dose: "140mg/mL", payer: "Aetna", plan: "Open Access", member: "AET20938471",
@@ -201,7 +201,7 @@ window.PATIENTS = [
     ],
   },
   {
-    id: "PT-000013", mrn: "MRN-104782", name: "Nia Washington", dob: "02/27/2001", sex: "F",
+    id: "PT-000013", mrn: "MRN-104782", contactIds: ["ct-013", "ct-002"], providerIds: ["Pr3"], name: "Nia Washington", dob: "02/27/2001", sex: "F",
     phone: "(312) 555-0734", email: "nia.washington@email.com", lang: "English",
     address: "1560 S Michigan Ave, Chicago, IL 60605", city: "Chicago", state: "IL", zip: "60605",
     drug: "Skyrizi", dose: "150mg/mL", payer: "Blue Cross Blue Shield IL", plan: "PPO Gold", member: "BCB29384712",
@@ -217,7 +217,7 @@ window.PATIENTS = [
     ],
   },
   {
-    id: "PT-000014", mrn: "MRN-673048", name: "Hiroshi Tanaka", dob: "12/16/1975", sex: "M",
+    id: "PT-000014", mrn: "MRN-673048", contactIds: ["ct-014", "ct-003"], providerIds: ["Pr4"], name: "Hiroshi Tanaka", dob: "12/16/1975", sex: "M",
     phone: "(847) 555-0812", email: "hiroshi.tanaka@email.com", lang: "Japanese",
     address: "3390 Lake Cook Rd, Northbrook, IL 60062", city: "Northbrook", state: "IL", zip: "60062",
     drug: "Entyvio", dose: "300mg", payer: "Humana", plan: "PPO", member: "HUM60293845",
@@ -233,7 +233,7 @@ window.PATIENTS = [
     ],
   },
   {
-    id: "PT-000015", mrn: "MRN-395210", name: "Amara Okonkwo", dob: "09/09/1992", sex: "F",
+    id: "PT-000015", mrn: "MRN-395210", contactIds: ["ct-015", "ct-004"], providerIds: ["Pr5"], name: "Amara Okonkwo", dob: "09/09/1992", sex: "F",
     phone: "(773) 555-0946", email: "amara.okonkwo@email.com", lang: "English",
     address: "2205 W Division St, Chicago, IL 60622", city: "Chicago", state: "IL", zip: "60622",
     drug: "Actemra", dose: "162mg/0.9mL", payer: "Cigna", plan: "Open Access Plus", member: "CIG70293845",
@@ -249,7 +249,7 @@ window.PATIENTS = [
     ],
   },
   {
-    id: "PT-000016", mrn: "MRN-528716", name: "William Foster", dob: "07/07/1960", sex: "M",
+    id: "PT-000016", mrn: "MRN-528716", contactIds: ["ct-016", "ct-005"], providerIds: ["Pr6"], name: "William Foster", dob: "07/07/1960", sex: "M",
     phone: "(630) 555-1023", email: "william.foster@email.com", lang: "English",
     address: "94 Prairie Ave, Wheaton, IL 60187", city: "Wheaton", state: "IL", zip: "60187",
     drug: "Darzalex", dose: "20mg/mL", payer: "Medicare Part B", plan: "Original Medicare", member: "MCR83920475",
@@ -265,7 +265,7 @@ window.PATIENTS = [
     ],
   },
   {
-    id: "PT-000017", mrn: "MRN-461937", name: "Isabella Torres", dob: "04/23/1999", sex: "F",
+    id: "PT-000017", mrn: "MRN-461937", contactIds: ["ct-001", "ct-006"], providerIds: ["Pr7"], name: "Isabella Torres", dob: "04/23/1999", sex: "F",
     phone: "(312) 555-1187", email: "isabella.torres@email.com", lang: "Spanish",
     address: "710 W Roosevelt Rd, Chicago, IL 60607", city: "Chicago", state: "IL", zip: "60607",
     drug: "Dupixent", dose: "300mg/2mL", payer: "Blue Cross Blue Shield IL", plan: "HMO Illinois", member: "BCB50293847",
@@ -281,7 +281,7 @@ window.PATIENTS = [
     ],
   },
   {
-    id: "PT-000018", mrn: "MRN-750318", name: "Samuel Petrov", dob: "10/30/1955", sex: "M",
+    id: "PT-000018", mrn: "MRN-750318", contactIds: ["ct-002", "ct-007"], providerIds: ["Pr8"], name: "Samuel Petrov", dob: "10/30/1955", sex: "M",
     phone: "(847) 555-1254", email: "samuel.petrov@email.com", lang: "Russian",
     address: "1122 Central Rd, Mount Prospect, IL 60056", city: "Mount Prospect", state: "IL", zip: "60056",
     drug: "Keytruda", dose: "100mg/4mL", payer: "Aetna", plan: "Select HMO", member: "AET60293847",

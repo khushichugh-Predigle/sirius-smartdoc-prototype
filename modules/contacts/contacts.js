@@ -109,11 +109,15 @@
   }
 
   function render() {
+    // This file is also loaded on the Patients page (see window.ContactEditor
+    // below) purely for its Add/Edit Contact modal — #contactsPageBody only
+    // exists on the real Contacts page, so skip the list render elsewhere.
+    if (!document.getElementById('contactsPageBody')) return;
     const rows = filtered();
     const rowsHtml = rows.map((c) => {
       const audit = AuditStamp.stampFor(c.id);
       return `
-      <tr>
+      <tr class="selectable" data-view-id="${c.id}">
         <td>${esc(c.first_name)} ${esc(c.last_name)}${c.title ? `<br><span style="color:var(--t4);font-size:10.5px">${esc(c.title)}</span>` : ''}</td>
         <td>${esc(c.organization || '—')}</td>
         <td>${esc(c.org_type || '—')}</td>
@@ -216,11 +220,13 @@
       else { state.sortCol = col; state.sortAsc = true; }
       render();
     }));
-    document.querySelectorAll('[data-edit-id]').forEach((btn) => btn.addEventListener('click', () => openForm(btn.dataset.editId)));
-    document.querySelectorAll('[data-delete-id]').forEach((btn) => btn.addEventListener('click', () => {
+    document.querySelectorAll('[data-edit-id]').forEach((btn) => btn.addEventListener('click', (e) => { e.stopPropagation(); openForm(btn.dataset.editId); }));
+    document.querySelectorAll('[data-delete-id]').forEach((btn) => btn.addEventListener('click', (e) => {
+      e.stopPropagation();
       if (btn.disabled) return;
       openDeleteConfirm(btn.dataset.deleteId);
     }));
+    document.querySelectorAll('tr[data-view-id]').forEach((tr) => tr.addEventListener('click', () => openView(tr.dataset.viewId)));
     injectIcons(document.getElementById('contactsPageBody'));
   }
 
@@ -289,6 +295,45 @@
     });
   }
 
+  /* ---------- View (read-only) ----------
+   * Same field grid/order as the Add/Edit form, just static text instead of
+   * inputs — a row click opens this; its own Edit button hands off to the
+   * real edit form. */
+  function viewField(label, value, opts) {
+    opts = opts || {};
+    return `<div class="reclassify-field${opts.full ? ' full' : ''}">
+      <label>${label}</label>
+      <div class="patient-view-value">${esc(value) || '—'}</div>
+    </div>`;
+  }
+
+  function contactViewMarkup(c) {
+    return `
+      <div class="contacts-field-grid">
+        ${CONTACT_FIELDS.map(([key, label, opts]) => viewField(label, c[key], opts)).join('')}
+        ${viewField('Site', c.site)}
+        ${viewField('Org Type', c.org_type)}
+        ${viewField('Associated Org', c.associated_org)}
+        <div class="reclassify-field full contacts-checkbox-row">
+          <span class="patient-view-flag">${c.referral_source ? '✓' : '—'} Referral Source</span>
+          <span class="patient-view-flag">${c.allow_web_access ? '✓' : '—'} Allow Web Access</span>
+          <span class="patient-view-flag">${c.primary_contact ? '✓' : '—'} Primary Contact</span>
+        </div>
+        ${viewField('Notes', c.notes, { full: true })}
+      </div>
+    `;
+  }
+
+  function openView(id) {
+    const c = (window.CONTACTS || []).find((x) => x.id === id);
+    if (!c) return;
+    document.getElementById('contactViewTitle').textContent = `${c.first_name} ${c.last_name}`;
+    document.getElementById('contactViewBody').innerHTML = contactViewMarkup(c);
+    document.getElementById('contactViewEditBtn').onclick = () => { closeView(); openForm(id); };
+    document.getElementById('contactViewOverlay').style.display = 'flex';
+  }
+  function closeView() { document.getElementById('contactViewOverlay').style.display = 'none'; }
+
   function openForm(id) {
     state.editingId = id;
     state.formValues = {};
@@ -347,6 +392,7 @@
     }
     closeForm();
     render();
+    if (window.onContactSaved) window.onContactSaved(values.id || state.editingId);
   }
 
   /* ---------- Delete ---------- */
@@ -358,9 +404,23 @@
   }
   function closeDeleteConfirm() { document.getElementById('deleteContactOverlay').style.display = 'none'; }
 
+  // Reusable from any page that includes this file + the same overlay
+  // markup (contactFormOverlay/deleteContactOverlay) — the Patients page's
+  // linked-Contacts section calls this instead of duplicating the Add/Edit
+  // Contact modal.
+  window.ContactEditor = { openForm, closeForm, openDeleteConfirm, closeDeleteConfirm, openView, closeView };
+
   document.addEventListener('DOMContentLoaded', () => {
-    Shell.init('contacts');
-    document.getElementById('contactsAddNewBtn').addEventListener('click', () => openForm('new'));
+    // Page-specific wiring (nav highlight, the list itself, its own Add New
+    // button) only applies on the real Contacts page.
+    if (document.getElementById('contactsPageBody')) {
+      Shell.init('contacts');
+      document.getElementById('contactsAddNewBtn').addEventListener('click', () => openForm('new'));
+      render();
+    }
+    // The modal shell's own close/cancel wiring is needed wherever the
+    // overlay markup exists (Contacts page or Patients page).
+    document.getElementById('contactViewCloseBtn').addEventListener('click', closeView);
     document.getElementById('contactFormCloseBtn').addEventListener('click', closeForm);
     document.getElementById('deleteContactCloseBtn').addEventListener('click', closeDeleteConfirm);
     document.getElementById('deleteContactCancelBtn').addEventListener('click', closeDeleteConfirm);
@@ -369,7 +429,7 @@
       closeDeleteConfirm();
       toast('Contact deleted');
       render();
+      if (window.onContactDeleted) window.onContactDeleted(state.deleteId);
     });
-    render();
   });
 })();

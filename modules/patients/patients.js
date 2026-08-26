@@ -12,6 +12,7 @@
   const state = {
     search: '', statusFilter: '', sortCol: 'name', sortAsc: true, editingId: null, formValues: {}, deleteId: null,
     filterOpen: false, payerFilter: [], createdFrom: '', createdTo: '', updatedFrom: '', updatedTo: '',
+    viewingId: null, editingProviderId: null,
   };
 
   function activeFilterCount() {
@@ -100,7 +101,7 @@
     const rowsHtml = rows.map((p) => {
       const audit = AuditStamp.stampFor(p.mrn || p.name);
       return `
-      <tr>
+      <tr class="selectable" data-view-id="${p.id}">
         <td class="mono" style="color:var(--t3)">${esc(p.mrn)}</td>
         <td><b>${esc(p.name)}</b></td>
         <td class="mono">${esc(p.dob)}${p.sex ? ` · ${esc(p.sex)}` : ''}</td>
@@ -195,8 +196,9 @@
       else { state.sortCol = col; state.sortAsc = true; }
       render();
     }));
-    document.querySelectorAll('[data-edit-id]').forEach((btn) => btn.addEventListener('click', () => openForm(btn.dataset.editId)));
-    document.querySelectorAll('[data-delete-id]').forEach((btn) => btn.addEventListener('click', () => openDeleteConfirm(btn.dataset.deleteId)));
+    document.querySelectorAll('[data-edit-id]').forEach((btn) => btn.addEventListener('click', (e) => { e.stopPropagation(); openForm(btn.dataset.editId); }));
+    document.querySelectorAll('[data-delete-id]').forEach((btn) => btn.addEventListener('click', (e) => { e.stopPropagation(); openDeleteConfirm(btn.dataset.deleteId); }));
+    document.querySelectorAll('tr[data-view-id]').forEach((tr) => tr.addEventListener('click', () => openView(tr.dataset.viewId)));
     injectIcons(document.getElementById('patientsPageBody'));
   }
 
@@ -339,6 +341,321 @@
   }
 
   /* ---------- Delete ---------- */
+  /* ---------- View (read-only) + linked Contacts / Providers / Cases ----------
+   * Row click opens this; its Edit button hands off to the real Edit form
+   * (same split as Contacts' View->Edit). The three linked sections are
+   * summary tables with link/unlink here — editing a linked contact/provider
+   * happens in that record's own real edit form (Contacts' modal, reused
+   * as-is; a lightweight new one for Providers, since none existed before).
+   * Cases are not editable here — summary only, "Open case" goes to Case
+   * Management, which is the real system of record for case data. */
+  function viewField(label, value, opts) {
+    opts = opts || {};
+    return `<div class="reclassify-field${opts.full ? ' full' : ''}">
+      <label>${label}</label>
+      <div class="patient-view-value">${esc(value) || '—'}</div>
+    </div>`;
+  }
+
+  function patientViewFieldsMarkup(p) {
+    return `
+      <div class="contacts-field-grid">
+        ${PATIENT_FIELD_GROUPS.map((g) => `
+          <div class="reclassify-field full provider-form-group-heading">${esc(g.title)}</div>
+          ${g.fields.map(([key, label]) => {
+            let val;
+            if (key === 'first_name') val = (p.name || '').split(' ')[0];
+            else if (key === 'last_name') val = (p.name || '').split(' ').slice(1).join(' ');
+            else if (key === 'ht') val = p.vitals && p.vitals.ht;
+            else if (key === 'wt') val = p.vitals && p.vitals.wt;
+            else if (key === 'bmi') val = p.vitals && p.vitals.bmi;
+            else val = p[key];
+            return viewField(label, val, { full: key === 'address' || key === 'dx' });
+          }).join('')}
+        `).join('')}
+        ${viewField('Status', p.status)}
+      </div>
+    `;
+  }
+
+  function caseStateBdg(status) {
+    const map = { 'Intake Review': 'gray', 'Awaiting BV (Insights)': 'warn', 'PA Submitted': 'info', 'Approved — Scheduling': 'ok', 'Approved': 'ok', 'Denied': 'err' };
+    return `<span class="bdg ${map[status] || 'gray'}"><span class="d"></span>${esc(status)}</span>`;
+  }
+
+  function linkedContactsMarkup(p) {
+    const ids = p.contactIds || [];
+    const contacts = ids.map((id) => (window.CONTACTS || []).find((c) => c.id === id)).filter(Boolean);
+    return `
+      <div class="patient-linked-head">
+        <span class="patient-linked-title">Contacts (${contacts.length})</span>
+        <button class="btn" type="button" data-link-contact="${p.id}">+ Link Contact</button>
+      </div>
+      ${contacts.length ? `<div class="gridwrap" style="border:1px solid var(--border-lt);border-radius:8px;max-height:220px"><table class="contacts-tbl"><thead><tr>
+          <th>NAME</th><th>ORGANIZATION</th><th>PHONE</th><th>EMAIL</th><th></th>
+        </tr></thead><tbody>
+          ${contacts.map((c) => `
+            <tr class="selectable" data-open-contact="${c.id}">
+              <td>${esc(c.first_name)} ${esc(c.last_name)}</td>
+              <td>${esc(c.organization || '—')}</td>
+              <td>${esc(c.office_phone || c.home_phone || '—')}</td>
+              <td>${esc(c.email || '—')}</td>
+              <td><button type="button" class="danger" data-unlink-contact="${c.id}" title="Unlink from this patient" aria-label="Unlink contact">${ICON_DELETE}</button></td>
+            </tr>`).join('')}
+        </tbody></table></div>` : `<div class="contacts-empty">No contacts linked to this patient.</div>`}
+    `;
+  }
+
+  function linkedProvidersMarkup(p) {
+    const ids = p.providerIds || [];
+    const providers = ids.map((id) => (window.PROVIDERS || []).find((x) => x.id === id)).filter(Boolean);
+    return `
+      <div class="patient-linked-head">
+        <span class="patient-linked-title">Providers (${providers.length})</span>
+        <button class="btn" type="button" data-link-provider="${p.id}">+ Link Provider</button>
+      </div>
+      ${providers.length ? `<div class="gridwrap" style="border:1px solid var(--border-lt);border-radius:8px;max-height:220px"><table class="contacts-tbl"><thead><tr>
+          <th>NAME</th><th>SPECIALTY</th><th>ORGANIZATION</th><th>NPI</th><th></th>
+        </tr></thead><tbody>
+          ${providers.map((pr) => `
+            <tr class="selectable" data-open-provider="${pr.id}">
+              <td>${esc(pr.first_name)} ${esc(pr.last_name)}</td>
+              <td>${esc(pr.specialty || '—')}</td>
+              <td>${esc(pr.organization || '—')}</td>
+              <td style="font-family:monospace;font-size:11px">${esc(pr.npi || '—')}</td>
+              <td>
+                <div class="contact-row-actions">
+                  <button type="button" data-edit-provider="${pr.id}" title="Edit provider" aria-label="Edit provider">${ICON_EDIT}</button>
+                  <button type="button" class="danger" data-unlink-provider="${pr.id}" title="Unlink from this patient" aria-label="Unlink provider">${ICON_DELETE}</button>
+                </div>
+              </td>
+            </tr>`).join('')}
+        </tbody></table></div>` : `<div class="contacts-empty">No providers linked to this patient.</div>`}
+    `;
+  }
+
+  function casesMarkup(p) {
+    const cases = p.cases || [];
+    return `
+      <div class="patient-linked-head">
+        <span class="patient-linked-title">Cases (${cases.length})</span>
+      </div>
+      ${cases.length ? `<div class="gridwrap" style="border:1px solid var(--border-lt);border-radius:8px;max-height:220px"><table class="contacts-tbl"><thead><tr>
+          <th>CASE ID</th><th>STATUS</th><th>RECEIVED</th><th>DRUG</th><th>PAYER</th><th></th>
+        </tr></thead><tbody>
+          ${cases.map((c) => `
+            <tr>
+              <td class="mono">${esc(c.id)}</td>
+              <td>${caseStateBdg(c.status)}</td>
+              <td>${esc(c.received || '—')}</td>
+              <td>${esc(c.drug || '—')}</td>
+              <td>${esc(c.payer || '—')}</td>
+              <td><a class="tb-link" href="../case-management/case-management.html?id=${encodeURIComponent(c.id)}">Open case →</a></td>
+            </tr>`).join('')}
+        </tbody></table></div>` : `<div class="contacts-empty">No cases for this patient.</div>`}
+    `;
+  }
+
+  function openView(id) {
+    const p = getPatients().find((x) => x.id === id);
+    if (!p) return;
+    state.viewingId = id;
+    document.getElementById('patientViewTitle').innerHTML = `${esc(p.name)} <span class="mono" style="font-size:10.5px;font-weight:500;color:var(--t3);margin-left:6px">${esc(p.mrn)}</span>`;
+    document.getElementById('patientViewBody').innerHTML = `
+      ${patientViewFieldsMarkup(p)}
+      <div class="patient-linked-section">${linkedContactsMarkup(p)}</div>
+      <div class="patient-linked-section">${linkedProvidersMarkup(p)}</div>
+      <div class="patient-linked-section">${casesMarkup(p)}</div>
+    `;
+    wireViewSections(p);
+    document.getElementById('patientViewEditBtn').onclick = () => { closeView(); openForm(id); };
+    document.getElementById('patientViewOverlay').style.display = 'flex';
+  }
+  function closeView() { document.getElementById('patientViewOverlay').style.display = 'none'; }
+
+  function wireViewSections(p) {
+    const body = document.getElementById('patientViewBody');
+    body.querySelectorAll('[data-open-contact]').forEach((tr) => tr.addEventListener('click', (e) => {
+      if (e.target.closest('[data-unlink-contact]')) return;
+      window.ContactEditor.openView(tr.dataset.openContact);
+    }));
+    body.querySelectorAll('[data-unlink-contact]').forEach((btn) => btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      p.contactIds = (p.contactIds || []).filter((id) => id !== btn.dataset.unlinkContact);
+      openView(p.id);
+      toast('Contact unlinked from this patient');
+    }));
+    body.querySelectorAll('[data-link-contact]').forEach((btn) => btn.addEventListener('click', () => openLinkContact(p.id)));
+    body.querySelectorAll('[data-open-provider]').forEach((tr) => tr.addEventListener('click', (e) => {
+      if (e.target.closest('[data-edit-provider]') || e.target.closest('[data-unlink-provider]')) return;
+      openProviderForm(tr.dataset.openProvider);
+    }));
+    body.querySelectorAll('[data-edit-provider]').forEach((btn) => btn.addEventListener('click', (e) => { e.stopPropagation(); openProviderForm(btn.dataset.editProvider); }));
+    body.querySelectorAll('[data-unlink-provider]').forEach((btn) => btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      p.providerIds = (p.providerIds || []).filter((id) => id !== btn.dataset.unlinkProvider);
+      openView(p.id);
+      toast('Provider unlinked from this patient');
+    }));
+    body.querySelectorAll('[data-link-provider]').forEach((btn) => btn.addEventListener('click', () => openLinkProvider(p.id)));
+  }
+
+  /* ---------- Link existing Contact / Provider ---------- */
+  function openLinkContact(patientId) {
+    const p = getPatients().find((x) => x.id === patientId);
+    if (!p) return;
+    const render = (q) => {
+      q = (q || '').trim().toLowerCase();
+      const linked = new Set(p.contactIds || []);
+      const rows = (window.CONTACTS || []).filter((c) => !linked.has(c.id) && (!q || `${c.first_name} ${c.last_name} ${c.organization}`.toLowerCase().includes(q)));
+      document.getElementById('linkContactBody').innerHTML = `
+        <input type="search" id="linkContactSearch" placeholder="Search contacts by name, organization…" value="${esc(q)}" style="width:100%;box-sizing:border-box;margin-bottom:10px" />
+        <div class="gridwrap" style="border:1px solid var(--border-lt);border-radius:8px;max-height:360px">
+          <table class="contacts-tbl"><thead><tr><th>NAME</th><th>ORGANIZATION</th><th>ORG TYPE</th><th></th></tr></thead><tbody>
+            ${rows.length ? rows.map((c) => `
+              <tr class="selectable" data-pick-contact="${c.id}">
+                <td>${esc(c.first_name)} ${esc(c.last_name)}</td>
+                <td>${esc(c.organization || '—')}</td>
+                <td>${esc(c.org_type || '—')}</td>
+                <td><button type="button" class="btn primary" data-pick-contact-btn="${c.id}">Link</button></td>
+              </tr>`).join('') : `<tr><td colspan="4"><div class="contacts-empty">No matching contacts.</div></td></tr>`}
+          </tbody></table>
+        </div>
+      `;
+      const input = document.getElementById('linkContactSearch');
+      input.focus();
+      input.setSelectionRange(input.value.length, input.value.length);
+      input.addEventListener('input', (e) => render(e.target.value));
+      document.querySelectorAll('[data-pick-contact-btn]').forEach((btn) => btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        p.contactIds = (p.contactIds || []).concat([btn.dataset.pickContactBtn]);
+        closeLinkContact();
+        openView(patientId);
+        toast('Contact linked to this patient');
+      }));
+    };
+    render('');
+    document.getElementById('linkContactOverlay').style.display = 'flex';
+  }
+  function closeLinkContact() { document.getElementById('linkContactOverlay').style.display = 'none'; }
+
+  function openLinkProvider(patientId) {
+    const p = getPatients().find((x) => x.id === patientId);
+    if (!p) return;
+    const render = (q) => {
+      q = (q || '').trim().toLowerCase();
+      const linked = new Set(p.providerIds || []);
+      const rows = (window.PROVIDERS || []).filter((pr) => !linked.has(pr.id) && (!q || `${pr.first_name} ${pr.last_name} ${pr.specialty} ${pr.organization}`.toLowerCase().includes(q)));
+      document.getElementById('linkProviderBody').innerHTML = `
+        <input type="search" id="linkProviderSearch" placeholder="Search providers by name, specialty, organization…" value="${esc(q)}" style="width:100%;box-sizing:border-box;margin-bottom:10px" />
+        <button class="btn primary" type="button" id="linkProviderAddNewBtn" style="margin-bottom:10px">+ Add New Provider</button>
+        <div class="gridwrap" style="border:1px solid var(--border-lt);border-radius:8px;max-height:340px">
+          <table class="contacts-tbl"><thead><tr><th>NAME</th><th>SPECIALTY</th><th>ORGANIZATION</th><th>NPI</th><th></th></tr></thead><tbody>
+            ${rows.length ? rows.map((pr) => `
+              <tr class="selectable" data-pick-provider="${pr.id}">
+                <td>${esc(pr.first_name)} ${esc(pr.last_name)}</td>
+                <td>${esc(pr.specialty || '—')}</td>
+                <td>${esc(pr.organization || '—')}</td>
+                <td style="font-family:monospace;font-size:11px">${esc(pr.npi || '—')}</td>
+                <td><button type="button" class="btn primary" data-pick-provider-btn="${pr.id}">Link</button></td>
+              </tr>`).join('') : `<tr><td colspan="5"><div class="contacts-empty">No matching providers.</div></td></tr>`}
+          </tbody></table>
+        </div>
+      `;
+      const input = document.getElementById('linkProviderSearch');
+      input.focus();
+      input.setSelectionRange(input.value.length, input.value.length);
+      input.addEventListener('input', (e) => render(e.target.value));
+      document.getElementById('linkProviderAddNewBtn').addEventListener('click', () => {
+        closeLinkProvider();
+        openProviderForm('new', patientId);
+      });
+      document.querySelectorAll('[data-pick-provider-btn]').forEach((btn) => btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        p.providerIds = (p.providerIds || []).concat([btn.dataset.pickProviderBtn]);
+        closeLinkProvider();
+        openView(patientId);
+        toast('Provider linked to this patient');
+      }));
+    };
+    render('');
+    document.getElementById('linkProviderOverlay').style.display = 'flex';
+  }
+  function closeLinkProvider() { document.getElementById('linkProviderOverlay').style.display = 'none'; }
+
+  /* ---------- Provider Add/Edit (lightweight — flat record, no nested
+   * License Info/Contacts subsections like Document Detail's richer form) ---------- */
+  const PROVIDER_FIELDS = [
+    ['first_name', 'First Name', { required: true }],
+    ['last_name', 'Last Name', { required: true }],
+    ['specialty', 'Specialty', { required: true }],
+    ['prof_designation', 'Prof. Designation', {}],
+    ['organization', 'Organization', {}],
+    ['address', 'Address', { full: true }],
+    ['city', 'City', {}],
+    ['state', 'State', {}],
+    ['zip', 'ZIP', {}],
+    ['phone', 'Phone', {}],
+    ['fax', 'Fax', {}],
+    ['email', 'Email', { type: 'email' }],
+    ['npi', 'NPI', {}],
+  ];
+
+  function providerGridField(label, key, values, opts) {
+    opts = opts || {};
+    return `<div class="reclassify-field${opts.full ? ' full' : ''}">
+      <label>${label}${opts.required ? ' <span class="req">*</span>' : ''}</label>
+      <input type="${opts.type || 'text'}" data-provider-field="${key}" value="${esc(values[key] || '')}" />
+    </div>`;
+  }
+
+  function providerFormMarkup(values) {
+    return `<div class="contacts-field-grid">${PROVIDER_FIELDS.map(([key, label, opts]) => providerGridField(label, key, values, opts)).join('')}</div>`;
+  }
+
+  let providerFormLinkPatientId = null;
+  function openProviderForm(id, linkPatientId) {
+    providerFormLinkPatientId = linkPatientId || null;
+    const isNew = id === 'new';
+    const pr = isNew ? {} : ((window.PROVIDERS || []).find((x) => x.id === id) || {});
+    state.editingProviderId = id;
+    document.getElementById('providerFormTitle').textContent = isNew ? 'Add New Provider' : 'Edit Provider';
+    document.getElementById('providerFormBody').innerHTML = providerFormMarkup(pr);
+    document.getElementById('providerFormFoot').innerHTML = `
+      <button class="btn" type="button" id="providerFormCancelBtn">Cancel</button>
+      <button class="btn primary" type="button" id="providerFormSaveBtn">${isNew ? 'Create' : 'Save changes'}</button>
+    `;
+    document.getElementById('providerFormCancelBtn').addEventListener('click', closeProviderForm);
+    document.getElementById('providerFormSaveBtn').addEventListener('click', saveProviderForm);
+    document.getElementById('providerFormOverlay').style.display = 'flex';
+  }
+  function closeProviderForm() { document.getElementById('providerFormOverlay').style.display = 'none'; }
+
+  function saveProviderForm() {
+    const values = {};
+    document.querySelectorAll('[data-provider-field]').forEach((el) => { values[el.dataset.providerField] = el.value.trim(); });
+    if (!values.first_name || !values.last_name || !values.specialty) {
+      toast('First name, last name, and specialty are required');
+      return;
+    }
+    if (state.editingProviderId === 'new') {
+      values.id = 'Pr' + Math.random().toString(36).slice(2, 8);
+      window.PROVIDERS = (window.PROVIDERS || []).concat([values]);
+      toast('Provider created');
+      if (providerFormLinkPatientId) {
+        const p = getPatients().find((x) => x.id === providerFormLinkPatientId);
+        if (p) { p.providerIds = (p.providerIds || []).concat([values.id]); }
+      }
+    } else {
+      const idx = (window.PROVIDERS || []).findIndex((x) => x.id === state.editingProviderId);
+      if (idx !== -1) window.PROVIDERS[idx] = Object.assign({}, window.PROVIDERS[idx], values);
+      toast('Provider updated');
+    }
+    closeProviderForm();
+    if (providerFormLinkPatientId) openView(providerFormLinkPatientId);
+    else if (state.viewingId) openView(state.viewingId);
+  }
+
   function openDeleteConfirm(id) {
     state.deleteId = id;
     const p = getPatients().find((x) => x.id === id);
@@ -361,6 +678,19 @@
       toast('Patient deleted');
       render();
     });
+    document.getElementById('patientViewCloseBtn').addEventListener('click', closeView);
+    document.getElementById('patientViewCloseBtn2').addEventListener('click', closeView);
+    document.getElementById('linkContactCloseBtn').addEventListener('click', closeLinkContact);
+    document.getElementById('linkProviderCloseBtn').addEventListener('click', closeLinkProvider);
+    document.getElementById('providerFormCloseBtn').addEventListener('click', closeProviderForm);
+    // Refresh the open View popup if a linked contact was edited/deleted from
+    // its own (reused) Contacts modal while the patient's View is showing.
+    window.onContactSaved = () => { if (state.viewingId) openView(state.viewingId); };
+    window.onContactDeleted = (id) => {
+      const p = getPatients().find((x) => x.id === state.viewingId);
+      if (p) p.contactIds = (p.contactIds || []).filter((cid) => cid !== id);
+      if (state.viewingId) openView(state.viewingId);
+    };
     render();
   });
 })();

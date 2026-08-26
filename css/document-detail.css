@@ -196,6 +196,15 @@
   width: 100%; box-sizing: border-box; border: 1px solid var(--border); border-radius: 6px; padding: 6px 8px; font-size: 12px;
 }
 .reclassify-field .contacts-checkbox { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--t2); font-weight: 500; }
+/* Read-only field grid (View popups) — same .reclassify-field/.contacts-
+   field-grid shape as the editable form, just static text instead of an
+   input, so View and Edit read as the same layout. */
+.patient-view-value { min-height: 29px; display: flex; align-items: center; font-size: 12px; color: var(--t1); padding: 4px 0; }
+.patient-view-flag { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--t2); font-weight: 500; }
+/* Linked Contacts/Providers/Cases sections inside the patient View popup. */
+.patient-linked-section { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border-lt); }
+.patient-linked-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.patient-linked-title { font-size: 12px; font-weight: 800; color: var(--t1); }
 
 /* Add/Edit Contact form — original 2-column field grid; field order/types
    (not layout) are taken from the real CPR+ Contact/Notes screen. */
