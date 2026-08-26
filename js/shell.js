@@ -194,3 +194,35 @@ function toast(message) {
     setTimeout(() => el.remove(), 200);
   }, 2600);
 }
+
+/* Horizontal scroll-shadow for .gridwrap (the shared scrollable-table
+ * container used by every table in the app — queue, patients, case
+ * management, contacts, provider search). A background-gradient painted on
+ * .gridwrap itself would be invisible: the table's own opaque cell
+ * backgrounds sit on top of it. Instead this toggles .shadow-left/
+ * .shadow-right classes that reveal absolutely-positioned overlay shadows
+ * (see .gridwrap::before/::after in css/table.css). Runs on every page via
+ * this file; a MutationObserver picks up tables that get built later by
+ * innerHTML re-renders (e.g. the provider search popup, Contacts), since
+ * each re-render replaces the .gridwrap node entirely. */
+(function () {
+  function updateShadow(el) {
+    const scrollable = el.scrollWidth > el.clientWidth + 1;
+    el.classList.toggle('shadow-left', scrollable && el.scrollLeft > 1);
+    el.classList.toggle('shadow-right', scrollable && el.scrollLeft < el.scrollWidth - el.clientWidth - 1);
+  }
+  function bind(el) {
+    if (el.__gridwrapShadowBound) { updateShadow(el); return; }
+    el.__gridwrapShadowBound = true;
+    el.addEventListener('scroll', () => updateShadow(el), { passive: true });
+    updateShadow(el);
+  }
+  function scanAll() {
+    document.querySelectorAll('.gridwrap').forEach(bind);
+  }
+  window.addEventListener('resize', scanAll);
+  document.addEventListener('DOMContentLoaded', () => {
+    scanAll();
+    new MutationObserver(scanAll).observe(document.body, { childList: true, subtree: true });
+  });
+})();

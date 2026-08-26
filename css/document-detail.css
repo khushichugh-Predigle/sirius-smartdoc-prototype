@@ -59,7 +59,11 @@
 /* Entity match accordion */
 .match-region { flex: none; padding: 10px 16px 2px; background: var(--card); }
 .match-accordion { border: 1px solid #e4e7ec; border-radius: 8px; background: #fff; overflow: hidden; }
-.match-head { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 auto; width: 100%; padding: 10px 12px; border: none; background: transparent; cursor: pointer; text-align: left; }
+.match-head { display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1 1 auto; width: 100%; padding: 10px 12px; border: 1px solid transparent; background: transparent; cursor: pointer; text-align: left; box-sizing: border-box; }
+/* Same treatment as a selected candidate row (.match-radio.sel) once a
+   match is confirmed — the collapsed header reads as "one of the cards",
+   not a plain button. */
+.match-head.sel { border-color: #059054; background: #ecfdf3; box-shadow: inset 0 0 0 1px #059054; }
 .match-ico { display: inline-flex; align-items: center; justify-content: center; width: 28px; height: 28px; flex: none; border-radius: 8px; background: #fef3c7; color: #b45309; }
 .match-ico.sel { background: #d1fae5; color: #059054; }
 .match-tt { display: flex; flex-direction: column; gap: 1px; min-width: 0; }

@@ -824,7 +824,7 @@
 
     wrap.innerHTML = `
       <div class="match-accordion${state.matchExpanded ? ' open' : ''}">
-        <button type="button" class="match-head" id="matchToggleBtn">
+        <button type="button" class="match-head${selected ? ' sel' : ''}" id="matchToggleBtn">
           <span class="match-ico${selected ? ' sel' : ''}">✓</span>
           ${headerInner}
           <span class="match-chevron"></span>
@@ -1104,7 +1104,7 @@
         <div style="display:flex; flex-direction:column; margin-right:auto; gap:2px;">
           <div style="display:flex; align-items:center; gap:8px;">
             <span class="provider-card-title">${escapeHtml(providerName(p))}</span>
-            ${p.origin === 'cpr' ? '' : `<span class="provider-origin ${badge.cls}">${badge.text}</span>`}
+            <span class="provider-origin ${badge.cls}">${badge.text}</span>
           </div>
           ${matchHeader}
         </div>
@@ -1510,10 +1510,6 @@
 
   const ICON_EDIT = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 20h9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M16.5 3.5a2.12 2.12 0 013 3L7 19l-4 1 1-4L16.5 3.5z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   const ICON_DELETE = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-  // Distinct from ICON_DELETE (permanent delete, used by Contacts) — this one
-  // reads as "detach", matching what the button actually does: unlink a
-  // provider from this patient without touching the record itself.
-  const ICON_UNLINK = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M9 15l6-6M10 6.5l1-1a3.5 3.5 0 015 5l-1 1M14 17.5l-1 1a3.5 3.5 0 01-5-5l1-1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 
   function contactsListMarkup() {
     const rows = contactsFiltered();
@@ -1983,10 +1979,10 @@
       renderForm();
     });
 
-    // "+ Add New" opens the create form directly — same directAdd behavior
-    // as Referral Source's "+ Add new referral source".
+    // "Add Provider" opens the search popup — pick an on-file provider from
+    // the full directory, or use its "Create New" to add one from scratch.
     document.getElementById('addProviderBtn').addEventListener('click', () => {
-      openProviderAddForm('add');
+      openProviderSearch('add');
     });
   });
 
@@ -2180,7 +2176,7 @@
               <td>
                 <div class="contact-row-actions">
                   <button type="button" data-prov-edit="${r.id}" title="Edit provider" aria-label="Edit provider">${ICON_EDIT}</button>
-                  <button type="button" class="danger" data-prov-unlink="${r.id}" title="${linked ? 'Remove from this patient' : 'Not attached to this patient'}" aria-label="Remove provider" ${linked ? '' : 'disabled'}>${ICON_UNLINK}</button>
+                  <button type="button" class="danger" data-prov-unlink="${r.id}" title="${linked ? 'Remove from this patient' : 'Not attached to this patient'}" aria-label="Remove provider" ${linked ? '' : 'disabled'}>${ICON_DELETE}</button>
                 </div>
               </td>
             </tr>`;
