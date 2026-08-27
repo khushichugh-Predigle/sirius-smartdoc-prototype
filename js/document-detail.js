@@ -332,26 +332,40 @@
       .concat(staged.map((id) => ({ id, pending: true })))
       .map((r) => Object.assign({}, r, { c: (window.CONTACTS || []).find((x) => x.id === r.id) }))
       .filter((r) => r.c);
-    // This card sits in a narrow single-column panel (~280px), nowhere near
-    // .contacts-tbl's 760px min-width — a table here would overflow off-
-    // screen with nothing visibly wrong in the DOM. A stacked compact row
-    // (same text treatment as the match-accordion candidates that already
-    // live in this same narrow column) fits instead.
+    // This card sits in a narrow single-column panel (~280px) — .contacts-tbl
+    // has a 760px min-width and would overflow off-screen here with nothing
+    // visibly wrong in the DOM. .sp-table (the side panel's case-picker
+    // table) is width:100%/table-layout:fixed with no min-width and already
+    // handles narrow columns via ellipsis truncation — reused as-is instead
+    // of inventing a new list style.
     return `<div class="patient-linked-section" data-provider-contacts="${p.uid}">
       <div class="patient-linked-head">
         <span class="patient-linked-title">Contacts (${rows.length})</span>
         <button type="button" class="btn" data-provider-create-contact="${p.uid}">+ Create Contact</button>
       </div>
-      ${rows.length ? `<div class="provider-contact-list">
-          ${rows.map((r) => `
-            <div class="provider-contact-row">
-              <div class="match-radio-main" style="flex-direction:column;align-items:flex-start;gap:2px">
-                <span class="match-radio-name">${escapeHtml(r.c.first_name)} ${escapeHtml(r.c.last_name)}${r.pending ? ' <span class="provider-origin origin-draft" style="margin-left:6px">Pending</span>' : ''}</span>
-                <span class="match-radio-meta">${escapeHtml(r.c.organization || '—')}</span>
-                <span class="match-radio-meta">${escapeHtml(r.c.office_phone || r.c.home_phone || '—')} · ${escapeHtml(r.c.email || '—')}</span>
-              </div>
-              <button type="button" class="danger" data-provider-detach-contact="${p.uid}" data-contact-id="${r.id}" title="Detach contact" aria-label="Detach contact">${ICON_DELETE}</button>
-            </div>`).join('')}
+      ${rows.length ? `<div class="sp-table-wrap">
+          <table class="sp-table">
+            <thead><tr><th>Name</th><th>Organization</th>${rows.some((r) => r.pending) ? '<th></th>' : ''}<th></th></tr></thead>
+            <tbody>
+              ${rows.map((r) => {
+                const name = `${r.c.first_name} ${r.c.last_name}`;
+                const phone = r.c.office_phone || r.c.home_phone || '—';
+                // Name+Org are ellipsis-truncated in this narrow column, so a
+                // "Pending" badge sharing the name cell can get silently
+                // clipped away — it gets its own slim column instead. Phone
+                // is dropped from the visible columns for the same reason;
+                // still reachable via the row's hover title (the same global
+                // truncation-tooltip utility that titles every table cell).
+                return `
+                <tr style="cursor:default" title="${escapeHtml(name)} · ${escapeHtml(r.c.organization || '—')} · ${escapeHtml(phone)}">
+                  <td>${escapeHtml(name)}</td>
+                  <td>${escapeHtml(r.c.organization || '—')}</td>
+                  ${r.pending ? '<td><span class="provider-origin origin-draft">Pending</span></td>' : (rows.some((x) => x.pending) ? '<td></td>' : '')}
+                  <td class="sp-pick"><button type="button" class="danger" data-provider-detach-contact="${p.uid}" data-contact-id="${r.id}" title="Detach contact" aria-label="Detach contact">${ICON_DELETE}</button></td>
+                </tr>`;
+              }).join('')}
+            </tbody>
+          </table>
         </div>` : `<div class="contacts-empty">No contacts attached to this provider.</div>`}
     </div>`;
   }
