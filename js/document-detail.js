@@ -332,41 +332,34 @@
       .concat(staged.map((id) => ({ id, pending: true })))
       .map((r) => Object.assign({}, r, { c: (window.CONTACTS || []).find((x) => x.id === r.id) }))
       .filter((r) => r.c);
-    // This card sits in a narrow single-column panel (~280px) — .contacts-tbl
-    // has a 760px min-width and would overflow off-screen here with nothing
-    // visibly wrong in the DOM. .sp-table (the side panel's case-picker
-    // table) is width:100%/table-layout:fixed with no min-width and already
-    // handles narrow columns via ellipsis truncation — reused as-is instead
-    // of inventing a new list style.
+    // .contacts-tbl is the app's real Contacts table — same one used by
+    // Patients' linked-Contacts, the wide Add/Edit Provider modal, and the
+    // referral-source list — with the zebra stripe/hover treatment the
+    // project's standing rules require every table to share. It has a
+    // 760px min-width, wider than this ~280px column, so cramming it in
+    // uncontained just runs it off-screen. Rather than trading that away
+    // for a squeezed, heavily-truncated table, it keeps its real width and
+    // scrolls horizontally in a gridwrap — the same overflow-x:auto
+    // treatment already used for this exact table elsewhere in this file
+    // (see providerListMarkup).
     return `<div class="patient-linked-section" data-provider-contacts="${p.uid}">
       <div class="patient-linked-head">
         <span class="patient-linked-title">Contacts (${rows.length})</span>
         <button type="button" class="btn" data-provider-create-contact="${p.uid}">+ Create Contact</button>
       </div>
-      ${rows.length ? `<div class="sp-table-wrap">
-          <table class="sp-table">
-            <thead><tr><th>Name</th><th>Organization</th>${rows.some((r) => r.pending) ? '<th></th>' : ''}<th></th></tr></thead>
-            <tbody>
-              ${rows.map((r) => {
-                const name = `${r.c.first_name} ${r.c.last_name}`;
-                const phone = r.c.office_phone || r.c.home_phone || '—';
-                // Name+Org are ellipsis-truncated in this narrow column, so a
-                // "Pending" badge sharing the name cell can get silently
-                // clipped away — it gets its own slim column instead. Phone
-                // is dropped from the visible columns for the same reason;
-                // still reachable via the row's hover title (the same global
-                // truncation-tooltip utility that titles every table cell).
-                return `
-                <tr style="cursor:default" title="${escapeHtml(name)} · ${escapeHtml(r.c.organization || '—')} · ${escapeHtml(phone)}">
-                  <td>${escapeHtml(name)}</td>
-                  <td>${escapeHtml(r.c.organization || '—')}</td>
-                  ${r.pending ? '<td><span class="provider-origin origin-draft">Pending</span></td>' : (rows.some((x) => x.pending) ? '<td></td>' : '')}
-                  <td class="sp-pick"><button type="button" class="danger" data-provider-detach-contact="${p.uid}" data-contact-id="${r.id}" title="Detach contact" aria-label="Detach contact">${ICON_DELETE}</button></td>
-                </tr>`;
-              }).join('')}
-            </tbody>
-          </table>
-        </div>` : `<div class="contacts-empty">No contacts attached to this provider.</div>`}
+      ${rows.length ? `<div class="gridwrap" style="overflow-x:auto;border:1px solid var(--border-lt);border-radius:8px"><table class="contacts-tbl">
+          <thead><tr><th>NAME</th><th>ORGANIZATION</th><th>PHONE</th><th>EMAIL</th><th></th></tr></thead>
+          <tbody>
+            ${rows.map((r) => `
+              <tr>
+                <td>${escapeHtml(r.c.first_name)} ${escapeHtml(r.c.last_name)}${r.pending ? ' <span class="provider-origin origin-draft" style="margin-left:6px">Pending</span>' : ''}</td>
+                <td>${escapeHtml(r.c.organization || '—')}</td>
+                <td>${escapeHtml(r.c.office_phone || r.c.home_phone || '—')}</td>
+                <td>${escapeHtml(r.c.email || '—')}</td>
+                <td><button type="button" class="danger" data-provider-detach-contact="${p.uid}" data-contact-id="${r.id}" title="Detach contact" aria-label="Detach contact">${ICON_DELETE}</button></td>
+              </tr>`).join('')}
+          </tbody>
+        </table></div>` : `<div class="contacts-empty">No contacts attached to this provider.</div>`}
     </div>`;
   }
 
