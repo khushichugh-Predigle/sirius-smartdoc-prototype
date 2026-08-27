@@ -501,18 +501,24 @@
       btn.style.display = 'inline-flex';
       btn.className = 'btn outline-primary';
       btn.disabled = false;
-      btn.textContent = 'Claim document';
+      btn.innerHTML = `${ic('user-check')} Assign to me`;
       btn.onclick = () => {
         claimDocument(cs);
-        toast('Document claimed — you can now edit it');
+        toast('Document assigned to you — you can now edit it');
         renderAll();
       };
     } else if (cs.isClaimedByMe) {
       btn.style.display = 'inline-flex';
       btn.className = 'btn';
-      btn.disabled = true;
-      btn.textContent = 'Claimed';
-      btn.onclick = null;
+      btn.disabled = false;
+      btn.innerHTML = `${ic('user-x')} Unassign`;
+      btn.onclick = () => {
+        Claims.unclaim(doc._id);
+        state.claimedBy = null;
+        state.status = 'Pending Review';
+        toast('Document unassigned — returned to Pending Review');
+        renderAll();
+      };
     } else if (cs.claimedBy && cs.role === 'pam') {
       btn.style.display = 'inline-flex';
       btn.className = 'btn';
