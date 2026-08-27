@@ -222,9 +222,14 @@
 }
 .patient-view-flag.on { background: var(--teal-faint); color: var(--teal); }
 .patient-view-flag.off { background: var(--chrome); color: var(--t4); }
-/* Linked Contacts/Providers/Cases sections inside the patient View popup. */
-.patient-linked-section { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border-lt); }
-.patient-linked-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+/* Linked Contacts/Providers/Cases sections inside the patient View popup,
+   and a provider card's own Contacts. grid-column is a no-op outside a
+   grid container (harmless in the patient popup, a plain block context),
+   but .provider-card-body IS a grid (repeat(auto-fill, minmax(230px,1fr)))
+   — without it this section was just one ~230px auto-fill track instead of
+   the full card width, same as every .subsection already spans. */
+.patient-linked-section { grid-column: 1 / -1; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border-lt); }
+.patient-linked-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
 .patient-linked-title { font-size: 12px; font-weight: 800; color: var(--t1); }
 
 /* Add/Edit Contact form — original 2-column field grid; field order/types

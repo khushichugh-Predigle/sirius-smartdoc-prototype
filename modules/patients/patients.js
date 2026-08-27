@@ -670,7 +670,7 @@
               <td>${esc(r.c.organization || '—')}</td>
               <td>${esc(r.c.office_phone || r.c.home_phone || '—')}</td>
               <td>${esc(r.c.email || '—')}</td>
-              <td><button type="button" class="danger" data-detach-provider-contact="${r.id}" title="Detach contact" aria-label="Detach contact">${ICON_DELETE}</button></td>
+              <td><div class="contact-row-actions"><button type="button" class="danger" data-detach-provider-contact="${r.id}" title="Detach contact" aria-label="Detach contact">${ICON_DELETE}</button></div></td>
             </tr>`).join('')}
         </tbody></table></div>` : `<div class="contacts-empty">No contacts attached to this provider.</div>`}
     `;

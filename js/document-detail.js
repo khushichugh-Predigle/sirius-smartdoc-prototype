@@ -356,7 +356,7 @@
                 <td>${escapeHtml(r.c.organization || '—')}</td>
                 <td>${escapeHtml(r.c.office_phone || r.c.home_phone || '—')}</td>
                 <td>${escapeHtml(r.c.email || '—')}</td>
-                <td><button type="button" class="danger" data-provider-detach-contact="${p.uid}" data-contact-id="${r.id}" title="Detach contact" aria-label="Detach contact">${ICON_DELETE}</button></td>
+                <td><div class="contact-row-actions"><button type="button" class="danger" data-provider-detach-contact="${p.uid}" data-contact-id="${r.id}" title="Detach contact" aria-label="Detach contact">${ICON_DELETE}</button></div></td>
               </tr>`).join('')}
           </tbody>
         </table></div>` : `<div class="contacts-empty">No contacts attached to this provider.</div>`}
@@ -2543,7 +2543,7 @@
               <td>${escapeHtml(r.c.organization || '—')}</td>
               <td>${escapeHtml(r.c.office_phone || r.c.home_phone || '—')}</td>
               <td>${escapeHtml(r.c.email || '—')}</td>
-              <td><button type="button" class="danger" data-provider-form-detach-contact="${r.id}" title="Detach contact" aria-label="Detach contact">${ICON_DELETE}</button></td>
+              <td><div class="contact-row-actions"><button type="button" class="danger" data-provider-form-detach-contact="${r.id}" title="Detach contact" aria-label="Detach contact">${ICON_DELETE}</button></div></td>
             </tr>`).join('')}
         </tbody></table></div>` : `<div class="contacts-empty">No contacts attached to this provider.</div>`}
     </div>`;
