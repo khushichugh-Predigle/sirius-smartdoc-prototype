@@ -20,7 +20,18 @@
   const assessPanelOpen = { summary: true }; // Clinical Review tab accordion panels — only Assessment Summary open by default
   let activePaIdx = {}; // caseId -> index into c.pas for Assessment/Submission
 
-  const TABS = [['overview', 'Overview'], ['pa', 'Assessment'], ['submission', 'Submission'], ['docs', 'Documents']];
+  /* Clinical Review's document review panel — default open, collapsible.
+   * activeDocKey identifies which document is showing in the preview:
+   * 'policy' for the (placeholder — no real policy PDF in this prototype)
+   * policy source, or a number for the index into c.docs[]. Clicking a
+   * citation picks a doc via a keyword guess (see guessCitationDoc) and an
+   * approximate highlight band, same "not real coordinates" convention as
+   * document-detail.js's showEvidenceOnPreview(). */
+  let assessDocsOpen = true;
+  let activeDocKey = 'policy';
+  let activeHighlightBand = null;
+
+  const TABS = [['overview', 'Overview'], ['pa', 'Clinical Review'], ['submission', 'Submission'], ['docs', 'Documents']];
 
   function C() {
     return (window.CASES || []).find((c) => c.id === caseId);
@@ -118,7 +129,6 @@
       if (p.length < 3) return '';
       return Math.floor((Date.now() - new Date(+p[2], +p[0] - 1, +p[1])) / 31557600000) + 'y';
     })();
-    const paCount = (c.pas || []).filter((p) => p.paRequired && p.payer !== 'SELF').length;
     const extId = c.mrn ? 'CPR-' + c.mrn.replace(/\D/g, '').slice(-5) : '—';
     const quick = `
       <button type="button" class="szbtn" title="Open in CPR+" data-action="toast" data-msg="Opening CPR+ (simulated)">${ic('ext')}</button>
@@ -163,11 +173,6 @@
           <div class="cb-r"><span class="k">Payer</span><span class="v"><span class="cb-pill"><span class="pn" style="background:var(--teal)"></span>${esc(c.payer)}</span> <span class="cb-pri">P1</span></span></div>
           <div class="cb-r"><span class="k">Plan</span><span class="v">${esc(c.plan || '—')}</span></div>
           <div class="cb-r"><span class="k">Member</span><span class="v mono">${esc(c.member)} <span class="conf ${c.memberConf >= 85 ? 'hi' : 'lo'}">${c.memberConf >= 85 ? '✓' : '⚠'} ${c.memberConf}%</span></span></div>
-        </div>
-        <div class="cb-pipe-col">
-          <div class="cb-h" style="color:#059054">${ic('clipcheck')} Case Status</div>
-          <div style="margin-top:8px">${caseStateBdg(c)}</div>
-          <div style="margin-top:6px;font-size:10px;color:var(--t4)">${paCount} prior authorization(s)</div>
         </div>
       </div>
     </div>`;
@@ -247,24 +252,78 @@
     return `<div class="search-select${disabled ? ' disabled' : ''}"><button type="button" class="search-select-trigger" ${disabled ? 'disabled' : ''} tabindex="-1"><span>${esc(label)}</span><span class="select-chevron" aria-hidden="true"></span></button></div>`;
   }
 
+  /* PA Requirement/Portal editing — ported from v64's setPendReq/setPendPortal/
+   * savePaRow (search those names in sirius_clearance_specialist_v64.html).
+   * A row starts "locked" (read-only text + Edit button) once it has a real
+   * paRequired value; Edit unlocks it into live CustomSelect dropdowns +
+   * Save; Save commits the staged p._pendReq/p._pendPortal, re-locks, logs
+   * an activity entry, and (same as v64) bumps the case into the Prior Auth
+   * stage the first time any item is marked Required. Ported v64's own
+   * genAudit()/ensureCasePackets() calls are dropped — this simpler
+   * prototype has no dynamic audit generator; a newly-Required item with no
+   * pre-authored audit just stays unviewable (same as any other
+   * audit-less row) rather than fabricating one.
+   */
+  const PORTAL_OPTIONS = ['Availity/Novologix', 'CMM/Navinet'];
+  function paRowLocked(p) { return p._locked !== undefined ? p._locked : p.paRequired !== undefined; }
+
+  function savePaRow(c, i) {
+    const p = c.pas[i];
+    const sel = p._pendReq !== undefined ? p._pendReq : (p.paRequired === true ? 'req' : p.paRequired === false ? 'notreq' : '');
+    if (p._pendPortal) { p.portal = p._pendPortal; delete p._pendPortal; }
+    if (sel === 'req') {
+      p.paRequired = true;
+      if (p.state === 'TBD' || p.state === 'Not Required' || !p.state) p.state = 'PA Required';
+      if (c.stage < 3) {
+        c.stage = 3;
+        c.clearance = c.clearance || 'Pending Prior Authorization';
+        c.log.push([nowStamp(), 'System', 'Case entered Prior Auth stage — ' + p.item + ' requires a prior authorization']);
+      }
+      c.log.push([nowStamp(), 'Khushi C.', 'PA set to Required for ' + p.item + ' · portal ' + (p.portal || '—')]);
+    } else if (sel === 'notreq') {
+      p.paRequired = false;
+      p.state = 'Not Required';
+      c.log.push([nowStamp(), 'Khushi C.', 'PA set to Not Required for ' + p.item]);
+    } else {
+      p.state = 'TBD';
+      c.log.push([nowStamp(), 'Khushi C.', 'Saved ' + p.item + ' — PA requirement not yet set']);
+    }
+    delete p._pendReq; delete p._pendPortal;
+    p._locked = true; p.updatedAt = nowStamp();
+    toast(p.item + ' saved', 1);
+    render();
+  }
+
   function paTable(c) {
     const pas = c.pas || [];
     const rows = pas.map((p, i) => {
       const self = p.payer === 'SELF';
       const view = paViewable(p);
-      const reqLabel = self ? 'Self-insured' : p.paRequired === true ? 'PA Required' : p.paRequired === false ? 'Not Required' : '— Select —';
-      const portLabel = p.paRequired === true ? (p.portal || '— Select —') : '—';
-      const viewBtn = self ? '' : selectDisplay('View', false);
+      const locked = self ? true : paRowLocked(p);
+      const sel = p._pendReq !== undefined ? p._pendReq : (p.paRequired === true ? 'req' : p.paRequired === false ? 'notreq' : '');
+      const reqShowsPortal = self ? false : (locked ? p.paRequired === true : sel === 'req');
+      let reqCell;
+      if (self) reqCell = '<span class="bdg gray"><span class="d"></span>Self-insured</span>';
+      else if (locked) reqCell = `<span style="font-size:11px;color:var(--t2)">${p.paRequired ? 'PA Required' : 'Not Required'}</span>`;
+      else reqCell = `<div id="paReqSel-${i}"></div>`;
+      let portCell;
+      if (!reqShowsPortal) portCell = '<span style="color:var(--t4);font-size:10.5px">—</span>';
+      else if (locked) portCell = `<span style="font-size:11px;color:var(--t2)">${esc(p.portal || PORTAL_OPTIONS[0])}</span>`;
+      else portCell = `<div id="paPortalSel-${i}"></div>`;
+      let actions;
+      if (self) actions = '<span style="font-size:10px;color:var(--t4)">Not applicable</span>';
+      else if (locked) actions = `<div class="pa-row-actions"><button type="button" class="btn xs" data-edit-pa="${i}">${ic('edit')} Edit</button></div>`;
+      else actions = `<div class="pa-row-actions"><button type="button" class="btn xs primary" data-save-pa="${i}">${ic('check')} Save</button></div>`;
+      const viewBtn = view ? `<button type="button" class="btn xs" data-open-pa="${i}">${ic('eye')} View</button>` : '';
       const audit = AuditStamp.stampFor(`${c.id}|pa|${i}|${p.item}`);
       return `<tr>
         <td><input readonly class="pa-seq" value="${p.seq}"></td>
         <td>${view ? `<span class="pa-item-link" data-open-pa="${i}" style="color:var(--teal);font-weight:600;cursor:pointer">${esc(p.item)}</span>` : `<span class="pa-item-off">${esc(p.item)}</span>`}</td>
         <td>${esc(p.payer || '—')}</td>
-        <td>${selectDisplay(reqLabel, true)}</td>
-        <td>${selectDisplay(portLabel, true)}</td>
+        <td>${reqCell}</td>
+        <td>${portCell}</td>
         <td>${paStateBdg(self ? 'Not Required' : p.state)}</td>
-        <td><span class="pa-upd-at">${esc(p.updatedAt || '—')}</span></td>
-        <td><div class="pa-row-actions"><button type="button" class="pa-save-btn" disabled>Save</button></div></td>
+        <td>${actions}</td>
         <td>${viewBtn}</td>
         <td>${esc(audit.createdOn)}</td>
         <td>${esc(audit.updatedOn)}<span class="sub"> by ${esc(audit.updatedBy)}</span></td>
@@ -274,9 +333,34 @@
       <div class="fset-t">PRIOR AUTHORIZATIONS (${pas.length})<div class="spacer"></div>
         <button type="button" class="pa-add-btn" data-action="add-pa">${ic('plus')} Add new prior authorization</button></div>
       ${pas.length
-        ? `<div class="pa-tbl-scroll" style="overflow-x:auto"><table class="pa-tbl" style="min-width:900px"><thead><tr><th style="width:44px">#</th><th>PA ITEM</th><th>PAYER</th><th>PA REQUIREMENT</th><th>PORTAL</th><th>STATUS</th><th>LAST UPDATED</th><th></th><th></th><th>CREATED ON</th><th>UPDATED</th></tr></thead><tbody>${rows}</tbody></table></div>`
+        ? `<div class="pa-tbl-scroll" style="overflow-x:auto"><table class="pa-tbl" style="min-width:900px"><thead><tr><th style="width:44px">#</th><th>PA ITEM</th><th>PAYER</th><th>PA REQUIREMENT</th><th>PORTAL</th><th>STATUS</th><th></th><th></th><th>CREATED ON</th><th>UPDATED</th></tr></thead><tbody>${rows}</tbody></table></div>`
         : `<div style="padding:40px 20px;text-align:center;color:var(--t4);font-size:11.5px">No prior authorizations yet.</div>`}
       </div>`;
+  }
+
+  function wirePaTable(c) {
+    (c.pas || []).forEach((p, i) => {
+      if (p.payer === 'SELF' || paRowLocked(p)) return;
+      const reqEl = document.getElementById('paReqSel-' + i);
+      if (reqEl) {
+        CustomSelect.mount(reqEl, {
+          options: [{ label: '— Select —', value: '' }, { label: 'PA Required', value: 'req' }, { label: 'Not Required', value: 'notreq' }],
+          value: p._pendReq !== undefined ? p._pendReq : (p.paRequired === true ? 'req' : p.paRequired === false ? 'notreq' : ''),
+          ariaLabel: 'PA Requirement',
+          onChange: (v) => { p._pendReq = v; render(); },
+        });
+      }
+      const portalEl = document.getElementById('paPortalSel-' + i);
+      if (portalEl) {
+        CustomSelect.mount(portalEl, {
+          options: PORTAL_OPTIONS.map((o) => ({ label: o, value: o })),
+          value: p._pendPortal || p.portal || '',
+          placeholder: '— Select —',
+          ariaLabel: 'Portal',
+          onChange: (v) => { p._pendPortal = v; },
+        });
+      }
+    });
   }
 
   function renderOverview(c) {
@@ -351,6 +435,88 @@
     return { cls: 'chip-not-met', label: (rating || 'LOW').split(/[–—-]/)[0].trim().toUpperCase() || 'LOW' };
   }
 
+  /* ---------- Clinical Review document panel + clickable citations ----------
+   * Reuses document-detail.js's right-section preview panel (same CSS: see
+   * css/right-section.css) and its "Evidence" mechanism (approximate
+   * hash-positioned highlight, no real source coordinates — same documented
+   * limitation as document-detail.js's showEvidenceOnPreview). "Documents
+   * used" = this case's real attached documents (c.docs) plus one
+   * placeholder for the policy the audit cites (no real policy PDF exists
+   * in this prototype's data, per the same placeholder-preview convention
+   * already used for the referral form). */
+  // hint: 'policy' (Policy Basis — always the policy), 'patient' (Case
+  // Snapshot — always a patient doc, these facts are extracted FROM the
+  // patient's own documents), or 'auto' (Assessment Findings — the only
+  // field that actually mixes "Clinicals/Packet/Request: …" and "Policy: …"
+  // prose in one free-text string).
+  function citeLink(display, keyText, hint) {
+    if (!display) return '';
+    const key = keyText != null ? keyText : display;
+    return `<span class="cite-link" data-cite="${esc(key)}" data-cite-hint="${hint || 'auto'}" role="button" tabindex="0">${esc(display)}</span>`;
+  }
+
+  function guessCitationDoc(text, c, hint) {
+    const docs = c.docs || [];
+    if (hint === 'policy') return 'policy';
+    const t = (text || '').toLowerCase();
+    const patientKeyword = () => {
+      if (!docs.length) return 'policy';
+      const kw = (t.match(/ncv|emg/) || [])[0];
+      const kwIdx = kw ? docs.findIndex((d) => d[0].toLowerCase().includes(kw)) : -1;
+      return kwIdx !== -1 ? kwIdx : 0;
+    };
+    if (hint === 'patient') return patientKeyword();
+    // 'auto' — pick whichever of "Clinicals/Packet/Request" vs "Policy" is
+    // mentioned first in the free text.
+    const clinMatch = t.match(/clinicals|packet|request/);
+    const polIdx = t.indexOf('policy');
+    const wantsPatientDoc = clinMatch && (polIdx === -1 || clinMatch.index < polIdx);
+    return wantsPatientDoc ? patientKeyword() : 'policy';
+  }
+
+  function openCitation(text, c, hint) {
+    activeDocKey = guessCitationDoc(text, c, hint);
+    const seed = (text || '').split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
+    activeHighlightBand = seed % 6;
+    assessDocsOpen = true;
+    render();
+    const panel = document.querySelector('.assessment-docs-panel');
+    if (panel) panel.scrollIntoView({ block: 'nearest' });
+    const docLabel = activeDocKey === 'policy' ? 'the policy source' : esc((c.docs[activeDocKey] || [])[0] || 'the document');
+    toast('Highlighted evidence in ' + docLabel + ' (approximate — no source coordinates in this prototype)');
+  }
+
+  function assessDocsPanelMarkup(c, pa) {
+    const docs = c.docs || [];
+    if (typeof activeDocKey === 'number' && activeDocKey >= docs.length) activeDocKey = 'policy';
+    const items = [{ key: 'policy', label: (pa.audit && pa.audit.policyName) || 'Policy source', sub: 'Policy · placeholder' }]
+      .concat(docs.map((d, i) => ({ key: i, label: d[0], sub: d[1] })));
+    const activeItem = items.find((it) => it.key === activeDocKey) || items[0];
+    const listHtml = items.map((it) => `
+      <div class="vsec ${it.key === activeDocKey ? 'act' : ''}" data-doc-key="${it.key}">
+        <span class="num" style="border:none;background:var(--chrome)">${ic(it.key === 'policy' ? 'file' : 'clip')}</span>
+        <span class="vl"><span class="s1">${esc(it.sub)}</span><br><span class="s2" style="word-break:break-word">${esc(it.label)}</span></span>
+      </div>`).join('');
+    const bandTop = activeHighlightBand != null ? (40 + activeHighlightBand * 70) : null;
+    return `<aside class="preview-panel-wrap assessment-docs-panel">
+      <div class="preview-panel">
+        <div class="preview-bar"><strong>${esc(activeItem.label)}</strong>
+          <button type="button" class="dt-side-btn active" data-action="toggle-docs-panel" aria-label="Collapse documents panel">${ic('x')}</button>
+        </div>
+        <div class="vrail-div" style="margin-top:0">DOCUMENTS USED (${items.length})</div>
+        <div style="max-height:160px;overflow-y:auto;flex:none">${listHtml}</div>
+        <div class="preview-body">
+          <div class="pdf-canvas-wrap">
+            <div class="pdf-page">
+              <img src="../../assets/images/document-preview-placeholder.svg" alt="Document preview placeholder" />
+              <div class="pdf-evidence-highlight" style="display:${bandTop != null ? 'block' : 'none'};top:${bandTop}px;left:40px;width:400px;height:18px"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </aside>`;
+  }
+
   function assessPanel(id, title, open, bodyHtml, headExtra) {
     return `<section class="panel">
       <button type="button" class="panel-head accordion-head" aria-controls="${id}" aria-expanded="${open ? 'true' : 'false'}" data-panel="${id}">
@@ -401,36 +567,43 @@
       ${ifClosed.rationale ? `<p class="summary-in-place">${esc(ifClosed.rationale)}</p>` : ''}`;
 
     const snapshotBody = (a.snapshot || []).length
-      ? `<div class="fgrid side-grid">${a.snapshot.map((s) => fld(s.label.toUpperCase(), esc(s.value) + (s.cite ? `<br><span style="color:var(--t4);font-weight:400;font-size:10px">${esc(s.cite)}</span>` : ''))).join('')}</div>`
+      ? `<div class="fgrid side-grid">${a.snapshot.map((s) => fld(s.label.toUpperCase(), esc(s.value) + (s.cite ? `<br><span style="color:var(--t4);font-weight:400;font-size:10px">${citeLink(s.cite, null, 'patient')}</span>` : ''))).join('')}</div>`
       : '<p class="summary-in-place">No snapshot captured.</p>';
 
     const clinicalBody = `<div class="fgrid side-grid">${fld('DIAGNOSIS', c.dx)}${fld('DRUG', c.drug)}${fld('DOSE / REGIMEN', c.dose)}${fld('CLINICAL', c.clinical)}</div>`;
 
     const policyBasisItems = (a.policyBasis && a.policyBasis.payer) || [];
     const policyBasisBody = policyBasisItems.length
-      ? `<ul class="summary-gap-list">${policyBasisItems.map((p) => `<li><b>${esc(p.ref)}</b><br>${esc(p.text)}</li>`).join('')}</ul>`
+      ? `<ul class="summary-gap-list">${policyBasisItems.map((p) => `<li><b>${citeLink(p.ref, p.ref + ' — ' + p.text, 'policy')}</b><br>${esc(p.text)}</li>`).join('')}</ul>`
       : '<p class="summary-in-place">No policy basis captured.</p>';
 
     const findingsBody = reqs.length
-      ? reqs.map((r) => `<div class="req-row"><span class="bdg ${statColor(r.status)}" style="flex:none"><span class="d"></span>${esc(r.verdict || r.status)}</span><span class="txt"><b>${esc(r.question)}</b><br>${esc(r.response || '')}${r.citation ? `<br><span style="color:var(--t4);font-size:10.5px">${esc(r.citeLabel || 'Citation')}: ${esc(r.citation)}</span>` : ''}</span></div>`).join('')
+      ? reqs.map((r) => `<div class="req-row"><span class="bdg ${statColor(r.status)}" style="flex:none"><span class="d"></span>${esc(r.verdict || r.status)}</span><span class="txt"><b>${esc(r.question)}</b><br>${esc(r.response || '')}${r.citation ? `<br><span style="color:var(--t4);font-size:10.5px">${esc(r.citeLabel || 'Citation')}: ${citeLink(r.citation)}</span>` : ''}</span></div>`).join('')
       : '<p class="summary-in-place">No findings captured.</p>';
+
+    const docsToggle = `<button type="button" class="dt-side-btn ${assessDocsOpen ? 'active' : ''}" data-action="toggle-docs-panel">${ic('file')} Documents</button>`;
 
     return `<div class="assessment-tab">
       <div class="assessment-toolbar">
         <label class="pa-picker-label">PRIOR AUTHORIZATIONS</label>
         ${picker}
+        <div style="flex:1"></div>
+        ${docsToggle}
       </div>
-      <div class="assessment-content"><div class="assessment-scroll">
-        <section class="assessment-title-card">
-          <h2>Prior Authorization Assessment - Policy - ${esc(pa.item)}</h2>
-          <span class="refreshed">Last refreshed ${esc(a.ranAt || '—')}</span>
-        </section>
-        ${assessPanel('assessment-summary-panel', 'ASSESSMENT SUMMARY', assessPanelOpen.summary, summaryBody)}
-        ${assessPanel('case-snapshot-panel', 'CASE SNAPSHOT', assessPanelOpen.snapshot, snapshotBody)}
-        ${assessPanel('clinical-summary-panel', 'CLINICAL SUMMARY', assessPanelOpen.clinical, clinicalBody)}
-        ${assessPanel('policy-basis-panel', 'POLICY BASIS - Must-Be-Met criteria', assessPanelOpen.basis, policyBasisBody)}
-        ${assessPanel('findings-panel', 'ASSESSMENT FINDINGS - ', assessPanelOpen.findings, findingsBody, `<a href="javascript:void(0)" class="policy-link">${esc(a.policyName || '—')}</a>`)}
-      </div></div>
+      <div class="assessment-body-split">
+        <div class="assessment-content"><div class="assessment-scroll">
+          <section class="assessment-title-card">
+            <h2>Prior Authorization Assessment - Policy - ${esc(pa.item)}</h2>
+            <span class="refreshed">Last refreshed ${esc(a.ranAt || '—')}</span>
+          </section>
+          ${assessPanel('assessment-summary-panel', 'ASSESSMENT SUMMARY', assessPanelOpen.summary, summaryBody)}
+          ${assessPanel('case-snapshot-panel', 'CASE SNAPSHOT', assessPanelOpen.snapshot, snapshotBody)}
+          ${assessPanel('clinical-summary-panel', 'CLINICAL SUMMARY', assessPanelOpen.clinical, clinicalBody)}
+          ${assessPanel('policy-basis-panel', 'POLICY BASIS - Must-Be-Met criteria', assessPanelOpen.basis, policyBasisBody)}
+          ${assessPanel('findings-panel', 'ASSESSMENT FINDINGS - ', assessPanelOpen.findings, findingsBody, `<a href="javascript:void(0)" class="policy-link">${esc(a.policyName || '—')}</a>`)}
+        </div></div>
+        ${assessDocsOpen ? assessDocsPanelMarkup(c, pa) : ''}
+      </div>
       <div class="assessment-actions">
         <button type="button" class="regenerate-btn" data-action="toast" data-msg="Regenerating assessment…">${ic('refresh')} Regenerate</button>
         <button type="button" class="complete-btn" data-action="toast" data-msg="Assessment marked reviewed">${ic('check')} Complete review</button>
@@ -573,6 +746,10 @@
     body.querySelectorAll('[data-open-pa]').forEach((el) => el.addEventListener('click', () => {
       activePaIdx[c.id] = +el.dataset.openPa; tab = 'pa'; render();
     }));
+    body.querySelectorAll('[data-edit-pa]').forEach((el) => el.addEventListener('click', () => {
+      c.pas[+el.dataset.editPa]._locked = false; render();
+    }));
+    body.querySelectorAll('[data-save-pa]').forEach((el) => el.addEventListener('click', () => savePaRow(c, +el.dataset.savePa)));
     body.querySelectorAll('[data-action="add-pa"]').forEach((el) => el.addEventListener('click', () => toast('Add prior authorization (simulated)')));
     body.querySelectorAll('[data-action="upload-portal"]').forEach((el) => el.addEventListener('click', () => {
       const pa = activePa(c);
@@ -591,6 +768,16 @@
       activePaIdx[c.id] = (c.pas || []).indexOf(list[(pos + 1) % list.length]);
       render();
     }));
+    body.querySelectorAll('[data-action="toggle-docs-panel"]').forEach((el) => el.addEventListener('click', () => {
+      assessDocsOpen = !assessDocsOpen; render();
+    }));
+    body.querySelectorAll('[data-doc-key]').forEach((el) => el.addEventListener('click', () => {
+      const k = el.dataset.docKey;
+      activeDocKey = k === 'policy' ? 'policy' : +k;
+      activeHighlightBand = null;
+      render();
+    }));
+    body.querySelectorAll('[data-cite]').forEach((el) => el.addEventListener('click', () => openCitation(el.dataset.cite, c, el.dataset.citeHint)));
   }
 
   function nowStamp() {
@@ -624,6 +811,7 @@
     body.classList.toggle('flat', tab === 'overview');
     injectIcons(body);
     wireBody(c);
+    if (tab === 'overview') wirePaTable(c);
   }
 
   document.addEventListener('DOMContentLoaded', () => {

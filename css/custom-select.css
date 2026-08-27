@@ -4,6 +4,12 @@
 .search-select-trigger {
   display: flex;
   align-items: center;
+  /* A real CustomSelect trigger is an <input> — this rule is a no-op for it
+     (no children to justify). The disabled dropdown-lookalike button some
+     screens use (label + .select-chevron as direct children, no absolute-
+     positioned .select-chevron-button) relies on this to pin its chevron to
+     the right edge instead of it sitting immediately after the label text. */
+  justify-content: space-between;
   width: 100%;
   height: 31px;
   padding: 0 30px 0 10px;
