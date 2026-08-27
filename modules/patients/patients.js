@@ -635,20 +635,112 @@
     return `<div class="contacts-field-grid">${PROVIDER_FIELDS.map(([key, label, opts]) => providerGridField(label, key, values, opts)).join('')}</div>`;
   }
 
+  /* ---------- Provider → Contacts (attach/create/detach) ----------
+   * A provider can have 0+ attached Contacts. They're stored on the shared
+   * window.PROVIDERS record itself (provider.contactIds) once that record
+   * exists, so the same contacts show no matter which patient or screen the
+   * provider is opened from. For a brand-new provider (id === 'new') there's
+   * no record yet, so contacts created before Create is clicked are staged
+   * here and attached the moment the provider is actually created.
+   * There is deliberately no "pick an existing contact" option — unlike
+   * Referral Source or the patient-level Link Contact flow, a provider's
+   * contacts can only be created fresh via the Contacts Add form. */
+  let providerFormStagedContactIds = [];
+
+  function providerContactsMarkup(id) {
+    const isNew = id === 'new';
+    const pr = isNew ? null : (window.PROVIDERS || []).find((x) => x.id === id);
+    const committedIds = pr ? (pr.contactIds || []) : [];
+    const stagedIds = isNew ? providerFormStagedContactIds : [];
+    const rows = committedIds.map((cid) => ({ id: cid, pending: false }))
+      .concat(stagedIds.map((cid) => ({ id: cid, pending: true })))
+      .map((r) => Object.assign({}, r, { c: (window.CONTACTS || []).find((x) => x.id === r.id) }))
+      .filter((r) => r.c);
+    return `
+      <div class="patient-linked-head">
+        <span class="patient-linked-title">Contacts (${rows.length})</span>
+        <button class="btn" type="button" id="providerFormCreateContactBtn">+ Create Contact</button>
+      </div>
+      ${rows.length ? `<div class="gridwrap" style="border:1px solid var(--border-lt);border-radius:8px;max-height:220px"><table class="contacts-tbl"><thead><tr>
+          <th>NAME</th><th>ORGANIZATION</th><th>PHONE</th><th>EMAIL</th><th></th>
+        </tr></thead><tbody>
+          ${rows.map((r) => `
+            <tr class="selectable" data-open-contact="${r.id}">
+              <td>${esc(r.c.first_name)} ${esc(r.c.last_name)}${r.pending ? ' <span class="provider-origin origin-draft" style="margin-left:6px">Pending</span>' : ''}</td>
+              <td>${esc(r.c.organization || '—')}</td>
+              <td>${esc(r.c.office_phone || r.c.home_phone || '—')}</td>
+              <td>${esc(r.c.email || '—')}</td>
+              <td><button type="button" class="danger" data-detach-provider-contact="${r.id}" title="Detach contact" aria-label="Detach contact">${ICON_DELETE}</button></td>
+            </tr>`).join('')}
+        </tbody></table></div>` : `<div class="contacts-empty">No contacts attached to this provider.</div>`}
+    `;
+  }
+
+  function renderProviderFormContacts(id) {
+    document.getElementById('providerFormContactsWrap').innerHTML = providerContactsMarkup(id);
+    wireProviderFormContacts(id);
+  }
+
+  function wireProviderFormContacts(id) {
+    const isNew = id === 'new';
+    document.getElementById('providerFormCreateContactBtn').addEventListener('click', () => {
+      const prevHandler = window.onContactSaved;
+      // Restored on either completion (via onContactSaved) or Cancel (via
+      // the listener below) — left dangling, this override would silently
+      // hijack the next unrelated contact save anywhere else in the app.
+      const cleanup = () => { window.onContactSaved = prevHandler; window.suppressContactSavedToast = false; };
+      window.onContactSaved = (cid) => {
+        cleanup();
+        if (isNew) {
+          providerFormStagedContactIds.push(cid);
+        } else {
+          const idx = (window.PROVIDERS || []).findIndex((x) => x.id === id);
+          if (idx !== -1) window.PROVIDERS[idx].contactIds = (window.PROVIDERS[idx].contactIds || []).concat([cid]);
+        }
+        toast('Contact created and attached to this provider');
+        renderProviderFormContacts(id);
+      };
+      window.suppressContactSavedToast = true;
+      window.ContactEditor.openForm('new');
+      const cancelBtn = document.getElementById('contactFormCancelBtn');
+      if (cancelBtn) cancelBtn.addEventListener('click', cleanup, { once: true });
+      const closeBtn = document.getElementById('contactFormCloseBtn');
+      if (closeBtn) closeBtn.addEventListener('click', cleanup, { once: true });
+    });
+    document.querySelectorAll('[data-open-contact]').forEach((tr) => tr.addEventListener('click', (e) => {
+      if (e.target.closest('[data-detach-provider-contact]')) return;
+      window.ContactEditor.openView(tr.dataset.openContact);
+    }));
+    document.querySelectorAll('[data-detach-provider-contact]').forEach((btn) => btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const cid = btn.dataset.detachProviderContact;
+      if (isNew) {
+        providerFormStagedContactIds = providerFormStagedContactIds.filter((x) => x !== cid);
+      } else {
+        const idx = (window.PROVIDERS || []).findIndex((x) => x.id === id);
+        if (idx !== -1) window.PROVIDERS[idx].contactIds = (window.PROVIDERS[idx].contactIds || []).filter((x) => x !== cid);
+      }
+      toast('Contact detached from this provider');
+      renderProviderFormContacts(id);
+    }));
+  }
+
   let providerFormLinkPatientId = null;
   function openProviderForm(id, linkPatientId) {
     providerFormLinkPatientId = linkPatientId || null;
     const isNew = id === 'new';
     const pr = isNew ? {} : ((window.PROVIDERS || []).find((x) => x.id === id) || {});
     state.editingProviderId = id;
+    providerFormStagedContactIds = [];
     document.getElementById('providerFormTitle').textContent = isNew ? 'Add New Provider' : 'Edit Provider';
-    document.getElementById('providerFormBody').innerHTML = providerFormMarkup(pr);
+    document.getElementById('providerFormBody').innerHTML = providerFormMarkup(pr) + `<div class="patient-linked-section" id="providerFormContactsWrap"></div>`;
     document.getElementById('providerFormFoot').innerHTML = `
       <button class="btn" type="button" id="providerFormCancelBtn">Cancel</button>
       <button class="btn primary" type="button" id="providerFormSaveBtn">${isNew ? 'Create' : 'Save changes'}</button>
     `;
     document.getElementById('providerFormCancelBtn').addEventListener('click', closeProviderForm);
     document.getElementById('providerFormSaveBtn').addEventListener('click', saveProviderForm);
+    renderProviderFormContacts(id);
     document.getElementById('providerFormOverlay').style.display = 'flex';
   }
   function closeProviderForm() { document.getElementById('providerFormOverlay').style.display = 'none'; }
@@ -662,6 +754,7 @@
     }
     if (state.editingProviderId === 'new') {
       values.id = 'Pr' + Math.random().toString(36).slice(2, 8);
+      values.contactIds = providerFormStagedContactIds.slice();
       window.PROVIDERS = (window.PROVIDERS || []).concat([values]);
       toast('Provider created');
       if (providerFormLinkPatientId) {
@@ -673,6 +766,7 @@
       if (idx !== -1) window.PROVIDERS[idx] = Object.assign({}, window.PROVIDERS[idx], values);
       toast('Provider updated');
     }
+    providerFormStagedContactIds = [];
     closeProviderForm();
     if (state.linkedRefresh) state.linkedRefresh();
     else if (providerFormLinkPatientId) openView(providerFormLinkPatientId);

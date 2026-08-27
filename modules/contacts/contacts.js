@@ -403,11 +403,14 @@
     if (state.editingId === 'new') {
       values.id = 'ct-' + Math.random().toString(36).slice(2, 9);
       window.CONTACTS = (window.CONTACTS || []).concat([values]);
-      toast('Contact created');
+      // A caller that wants its own more specific completion toast (e.g.
+      // "Contact created and attached to this provider") sets this flag
+      // before opening the form, so the two don't stack.
+      if (!window.suppressContactSavedToast) toast('Contact created');
     } else {
       const idx = (window.CONTACTS || []).findIndex((x) => x.id === state.editingId);
       if (idx !== -1) window.CONTACTS[idx] = Object.assign({}, window.CONTACTS[idx], values);
-      toast('Contact updated');
+      if (!window.suppressContactSavedToast) toast('Contact updated');
     }
     closeForm();
     render();

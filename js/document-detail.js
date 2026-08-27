@@ -33,6 +33,7 @@
     providerSearchView: 'list',   // 'list' | 'form' — same two-view stack as contactsModal
     providerFormValues: {},
     providerFormEditingId: null,  // CPR+ id being edited via the list's Edit icon, else null (= creating new)
+    providerFormStagedContactIds: [], // contacts created for a not-yet-saved provider, attached on Create
     providerSearchSpecialty: '',
     providerSearchSortCol: 'name',
     providerSearchSortAsc: true,
@@ -299,6 +300,96 @@
     return n || 'Unnamed provider';
   }
 
+  /* ---------- Provider → Contacts (attach/create/detach) ----------
+   * Contacts live on the shared CPR+ record (window.PROVIDERS/CPR_PRESCRIBERS
+   * .contactIds) once a card has a real cprId — matched, on-file, or edited
+   * in place. A card with no cprId yet (the raw extracted slot before a
+   * match is picked, or a brand-new "Add Provider" draft — this prototype
+   * never actually writes drafts into CPR_PRESCRIBERS, even on Save &
+   * Submit) has nowhere shared to attach to yet, so contacts created for it
+   * are staged on the card itself (p.stagedContactIds) and shown as
+   * "Pending". There's no "pick an existing contact" path here at all —
+   * unlike Referral Source, a provider's contacts can only be created fresh. */
+  function providerContactIds(p) {
+    if (p.cprId) {
+      const rec = CPR_PRESCRIBERS.find((r) => r.id === p.cprId);
+      return { committed: (rec && rec.contactIds) || [], staged: [] };
+    }
+    return { committed: [], staged: p.stagedContactIds || [] };
+  }
+
+  function providerContactDefaults(p) {
+    return {
+      organization: providerValue(p, 'Organization Name'), address: providerValue(p, 'Address'),
+      city: providerValue(p, 'City'), state: providerValue(p, 'State'), zip: providerValue(p, 'ZIP'),
+      office_phone: providerValue(p, 'Telephone'), associated_org: providerName(p),
+    };
+  }
+
+  function providerContactsSectionMarkup(p) {
+    const { committed, staged } = providerContactIds(p);
+    const rows = committed.map((id) => ({ id, pending: false }))
+      .concat(staged.map((id) => ({ id, pending: true })))
+      .map((r) => Object.assign({}, r, { c: (window.CONTACTS || []).find((x) => x.id === r.id) }))
+      .filter((r) => r.c);
+    // This card sits in a narrow single-column panel (~280px), nowhere near
+    // .contacts-tbl's 760px min-width — a table here would overflow off-
+    // screen with nothing visibly wrong in the DOM. A stacked compact row
+    // (same text treatment as the match-accordion candidates that already
+    // live in this same narrow column) fits instead.
+    return `<div class="patient-linked-section" data-provider-contacts="${p.uid}">
+      <div class="patient-linked-head">
+        <span class="patient-linked-title">Contacts (${rows.length})</span>
+        <button type="button" class="btn" data-provider-create-contact="${p.uid}">+ Create Contact</button>
+      </div>
+      ${rows.length ? `<div class="provider-contact-list">
+          ${rows.map((r) => `
+            <div class="provider-contact-row">
+              <div class="match-radio-main" style="flex-direction:column;align-items:flex-start;gap:2px">
+                <span class="match-radio-name">${escapeHtml(r.c.first_name)} ${escapeHtml(r.c.last_name)}${r.pending ? ' <span class="provider-origin origin-draft" style="margin-left:6px">Pending</span>' : ''}</span>
+                <span class="match-radio-meta">${escapeHtml(r.c.organization || '—')}</span>
+                <span class="match-radio-meta">${escapeHtml(r.c.office_phone || r.c.home_phone || '—')} · ${escapeHtml(r.c.email || '—')}</span>
+              </div>
+              <button type="button" class="danger" data-provider-detach-contact="${p.uid}" data-contact-id="${r.id}" title="Detach contact" aria-label="Detach contact">${ICON_DELETE}</button>
+            </div>`).join('')}
+        </div>` : `<div class="contacts-empty">No contacts attached to this provider.</div>`}
+    </div>`;
+  }
+
+  function openProviderContactCreate(uid) {
+    const p = providerByUid(uid);
+    if (!p) return;
+    contactsModal.open = true;
+    contactsModal.mode = 'provider';
+    contactsModal.view = 'form';
+    contactsModal.editingId = 'new';
+    contactsModal.formValues = Object.assign({ org_type: '', referral_source: false }, providerContactDefaults(p));
+    contactsModal.onCreated = (id) => {
+      if (p.cprId) {
+        const rec = CPR_PRESCRIBERS.find((r) => r.id === p.cprId);
+        if (rec) rec.contactIds = (rec.contactIds || []).concat([id]);
+      } else {
+        p.stagedContactIds = (p.stagedContactIds || []).concat([id]);
+      }
+      renderForm();
+    };
+    renderContactsModal();
+    document.getElementById('contactsOverlay').style.display = 'flex';
+  }
+
+  function detachProviderContact(uid, contactId) {
+    const p = providerByUid(uid);
+    if (!p) return;
+    if (p.cprId) {
+      const rec = CPR_PRESCRIBERS.find((r) => r.id === p.cprId);
+      if (rec) rec.contactIds = (rec.contactIds || []).filter((x) => x !== contactId);
+    } else {
+      p.stagedContactIds = (p.stagedContactIds || []).filter((x) => x !== contactId);
+    }
+    toast('Contact detached from this provider');
+    renderForm();
+  }
+
   // Contiguous 1..n after every add / remove / reorder. The Excel's Pat3
   // fixture has a "#2" with no "#1", and Scenario 4 shows it landing at #1 —
   // normalising reproduces that without a special case.
@@ -317,6 +408,7 @@
       cprId: cprId || null,
       record: values || null,  // the CPR values, for the extracted-vs-CPR diff
       edited: false,
+      stagedContactIds: [],    // contacts created before this card has a real cprId
     };
   }
 
@@ -337,6 +429,7 @@
       // find this same card again (to let the reviewer change their pick)
       // must not key off origin. This never changes once set.
       isExtractedSlot: true,
+      stagedContactIds: [],
     };
     state.providers = [extracted];
     renumberProviders();
@@ -693,6 +786,12 @@
       delete state.fieldOverrides[f._key];
       f._value = newVal;
     });
+    // Any contacts created for this slot before it had a real record now
+    // have one — carry them over onto the CPR record's shared contact list.
+    if ((p.stagedContactIds || []).length) {
+      rec.contactIds = (rec.contactIds || []).concat(p.stagedContactIds.filter((cid) => !(rec.contactIds || []).includes(cid)));
+      p.stagedContactIds = [];
+    }
     p.origin = 'cpr';
     p.cprId = rec.id;
     p.record = rec;
@@ -706,7 +805,13 @@
     const existing = state.providers.find((p) => p.cprId === id);
     if (existing) {
       // Excel Scenario 2 — dedupe rather than adding a second card, keep the
-      // existing rank, and say so explicitly.
+      // existing rank, and say so explicitly. Carry over any contacts the
+      // extracted slot had staged before this card gets dropped.
+      const extractedSlot = state.providers.find((p) => p.origin === 'extracted');
+      if (extractedSlot && (extractedSlot.stagedContactIds || []).length) {
+        const rec2 = CPR_PRESCRIBERS.find((r) => r.id === existing.cprId);
+        if (rec2) rec2.contactIds = (rec2.contactIds || []).concat(extractedSlot.stagedContactIds.filter((cid) => !(rec2.contactIds || []).includes(cid)));
+      }
       state.providers = state.providers.filter((p) => p.origin !== 'extracted');
       renumberProviders();
       renderForm();
@@ -1040,7 +1145,14 @@
     const badge = PROVIDER_ORIGIN_BADGE[p.origin];
     const cs = getClaimState();
     const locked = cs.isReadOnly && !cs.isGated;
-    const body = (p.sub.subsections || []).map((c) => subsectionMarkup(c, 1)).join('');
+    // The schema's own "Contacts" nested subsection is flat, always-empty
+    // placeholder fields (Contact Name/Office Phone/ZIP/City/State) never
+    // populated by extraction — replaced here with the real attach/create/
+    // detach widget instead of rendering it generically like every other
+    // nested subsection.
+    const body = (p.sub.subsections || [])
+      .filter((c) => c.title.trim() !== 'Contacts')
+      .map((c) => subsectionMarkup(c, 1)).join('') + providerContactsSectionMarkup(p);
     const sharedWarning = p.origin === 'cpr' && p.edited
       ? `<div class="provider-shared-warning">Editing this provider updates the shared record for every patient linked to it.</div>`
       : '';
@@ -1235,6 +1347,18 @@
         removeProvider(btn.dataset.providerRemove);
       });
     });
+    document.querySelectorAll('[data-provider-create-contact]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openProviderContactCreate(btn.dataset.providerCreateContact);
+      });
+    });
+    document.querySelectorAll('[data-provider-detach-contact]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        detachProviderContact(btn.dataset.providerDetachContact, btn.dataset.contactId);
+      });
+    });
     // Drag to reorder — the ranking interaction §5 asks for, on top of the
     // schema's own serialField (Seq #), which stays the source of truth.
     document.querySelectorAll('.provider-card[draggable="true"]').forEach((card) => {
@@ -1391,6 +1515,7 @@
     open: false, mode: 'select', targetFieldKey: null, view: 'list', search: '', orgTypeFilter: '', editingId: null, formValues: {}, deleteId: null, sortCol: 'name', sortAsc: true,
     filterOpen: false, orgFilter: [], stateFilter: '', referralOnly: false, hasEmail: false, hasPhone: false,
     createdFrom: '', createdTo: '', updatedFrom: '', updatedTo: '',
+    onCreated: null, // mode:'provider' completion callback — see openProviderContactCreate
   };
 
   function contactsActiveFilterCount() {
@@ -1657,7 +1782,9 @@
 
   function renderContactsModal() {
     document.getElementById('contactsModalTitle').textContent = contactsModalTitleText();
-    document.getElementById('contactsBackIconBtn').style.display = contactsModal.view === 'form' ? 'inline-flex' : 'none';
+    // mode:'provider' skips the list entirely (§7 — no picking an existing
+    // contact for a provider), so there's nowhere for Back to go.
+    document.getElementById('contactsBackIconBtn').style.display = (contactsModal.view === 'form' && contactsModal.mode !== 'provider') ? 'inline-flex' : 'none';
     const body = document.getElementById('contactsModalBody');
     body.innerHTML = contactsModal.view === 'list' ? contactsListMarkup() : contactsFormMarkup();
     const foot = document.getElementById('contactsModalFoot');
@@ -1771,7 +1898,10 @@
         onChange: (v) => { document.getElementById('contactSiteValue').value = v; },
       });
       mountAssociatedOrgSelect(orgTypeVal, document.getElementById('contactAssociatedOrgValue').value);
-      document.getElementById('contactFormCancelBtn').addEventListener('click', () => { contactsModal.view = 'list'; renderContactsModal(); });
+      document.getElementById('contactFormCancelBtn').addEventListener('click', () => {
+        if (contactsModal.mode === 'provider') { contactsModal.onCreated = null; closeContactsModal(); return; }
+        contactsModal.view = 'list'; renderContactsModal();
+      });
       document.getElementById('contactFormSaveBtn').addEventListener('click', saveContactForm);
     }
     document.getElementById('contactsBackIconBtn').onclick = () => { contactsModal.view = 'list'; renderContactsModal(); };
@@ -1802,6 +1932,14 @@
     if (contactsModal.editingId === 'new') {
       const id = 'ct-' + Math.random().toString(36).slice(2, 8);
       window.CONTACTS.push(Object.assign({ id, associated_with: 'provider' }, values));
+      if (contactsModal.mode === 'provider') {
+        const cb = contactsModal.onCreated;
+        contactsModal.onCreated = null;
+        closeContactsModal();
+        if (cb) cb(id);
+        toast('Contact created and attached to this provider');
+        return;
+      }
       toast('Contact created');
       if (contactsModal.mode === 'select') { selectReferralContact(id); return; }
     } else {
@@ -2071,6 +2209,7 @@
     state.providerSearchMode = mode || 'add';
     state.providerSearchView = 'form';
     state.providerFormEditingId = null;
+    state.providerFormStagedContactIds = [];
     state.providerFormValues = providerFormSeedValues();
     renderProviderModal();
     document.getElementById('providerSearchOverlay').style.display = 'flex';
@@ -2105,6 +2244,7 @@
     if (state.providerSearchView === 'form') {
       body.innerHTML = providerFormMarkup(state.providerFormValues);
       wireProviderFormSelects(state.providerFormValues);
+      wireProviderFormContacts();
       foot.style.display = 'flex';
       foot.innerHTML = `<button class="btn" type="button" id="providerFormCancelBtn">Cancel</button>
         <button class="btn primary" type="button" id="providerFormCreateBtn">${state.providerFormEditingId ? 'Save changes' : 'Create'}</button>`;
@@ -2113,6 +2253,7 @@
       // on-file providers to fall back to browsing/searching.
       document.getElementById('providerFormCancelBtn').addEventListener('click', () => {
         state.providerFormEditingId = null;
+        state.providerFormStagedContactIds = [];
         state.providerSearchView = 'list';
         renderProviderModal();
       });
@@ -2248,6 +2389,7 @@
     }));
     document.getElementById('providerSearchAddNewBtn').addEventListener('click', () => {
       state.providerFormEditingId = null;
+      state.providerFormStagedContactIds = [];
       state.providerSearchView = 'form';
       state.providerFormValues = providerFormSeedValues();
       renderProviderModal();
@@ -2277,10 +2419,14 @@
    * Layout reuses the exact Contacts 2-column grid (.contacts-field-grid /
    * .reclassify-field / gridField) — same component, provider data. */
   function providerFormFieldGroups() {
-    return (PROVIDER_TEMPLATE.subsections || []).map((sub) => ({
-      title: sub.title.trim(),
-      fields: sub.fields.filter((f) => f.key !== SEQ_FIELD_KEY),
-    }));
+    // "Contacts" is rendered separately as the real attach/create/detach
+    // widget (providerFormContactsMarkup), not as flat, always-empty fields.
+    return (PROVIDER_TEMPLATE.subsections || [])
+      .filter((sub) => sub.title.trim() !== 'Contacts')
+      .map((sub) => ({
+        title: sub.title.trim(),
+        fields: sub.fields.filter((f) => f.key !== SEQ_FIELD_KEY),
+      }));
   }
 
   function providerFieldKeyByLabel(label) {
@@ -2347,7 +2493,97 @@
         <div class="reclassify-field full provider-form-group-heading">${escapeHtml(g.title)}</div>
         ${g.fields.map((f) => providerFormFieldMarkup(f, values)).join('')}
       `).join('')}
+    </div><div id="providerFormContactsWrap">${providerFormContactsMarkup()}</div>`;
+  }
+
+  // Re-renders ONLY the Contacts widget, not the whole modal — a full
+  // renderProviderModal() would replace providerFormMarkup's plain <input>
+  // fields with fresh ones seeded from state.providerFormValues, silently
+  // discarding whatever the reviewer had already typed (those inputs are
+  // uncontrolled; they only get read back into state on Create).
+  function renderProviderFormContacts() {
+    const wrap = document.getElementById('providerFormContactsWrap');
+    if (!wrap) return;
+    wrap.innerHTML = providerFormContactsMarkup();
+    wireProviderFormContacts();
+  }
+
+  /* Same widget as the provider-card version (providerContactsSectionMarkup),
+   * but keyed to this modal's own state — an existing on-file record
+   * (state.providerFormEditingId) attaches contacts immediately to the
+   * shared CPR record; a new/unsaved provider stages them in
+   * state.providerFormStagedContactIds until Create is clicked. */
+  function providerFormContactsMarkup() {
+    const editingId = state.providerFormEditingId;
+    const rec = editingId ? CPR_PRESCRIBERS.find((r) => r.id === editingId) : null;
+    const committed = rec ? (rec.contactIds || []) : [];
+    const staged = editingId ? [] : (state.providerFormStagedContactIds || []);
+    const rows = committed.map((id) => ({ id, pending: false }))
+      .concat(staged.map((id) => ({ id, pending: true })))
+      .map((r) => Object.assign({}, r, { c: (window.CONTACTS || []).find((x) => x.id === r.id) }))
+      .filter((r) => r.c);
+    return `<div class="patient-linked-section">
+      <div class="patient-linked-head">
+        <span class="patient-linked-title">Contacts (${rows.length})</span>
+        <button type="button" class="btn" id="providerFormCreateContactBtn">+ Create Contact</button>
+      </div>
+      ${rows.length ? `<div class="gridwrap" style="border:1px solid var(--border-lt);border-radius:8px;max-height:220px"><table class="contacts-tbl"><thead><tr>
+          <th>NAME</th><th>ORGANIZATION</th><th>PHONE</th><th>EMAIL</th><th></th>
+        </tr></thead><tbody>
+          ${rows.map((r) => `
+            <tr>
+              <td>${escapeHtml(r.c.first_name)} ${escapeHtml(r.c.last_name)}${r.pending ? ' <span class="provider-origin origin-draft" style="margin-left:6px">Pending</span>' : ''}</td>
+              <td>${escapeHtml(r.c.organization || '—')}</td>
+              <td>${escapeHtml(r.c.office_phone || r.c.home_phone || '—')}</td>
+              <td>${escapeHtml(r.c.email || '—')}</td>
+              <td><button type="button" class="danger" data-provider-form-detach-contact="${r.id}" title="Detach contact" aria-label="Detach contact">${ICON_DELETE}</button></td>
+            </tr>`).join('')}
+        </tbody></table></div>` : `<div class="contacts-empty">No contacts attached to this provider.</div>`}
     </div>`;
+  }
+
+  function providerFormContactDefaults() {
+    const values = document.querySelectorAll('#providerSearchBody [data-pf-field]');
+    const map = {};
+    values.forEach((el) => { map[el.dataset.pfField] = el.value; });
+    return {
+      organization: map[providerFieldKeyByLabel('Organization Name')] || '',
+      address: map[providerFieldKeyByLabel('Address')] || '',
+      associated_org: [map[PROVIDER_FIRST_NAME_KEY], map[PROVIDER_LAST_NAME_KEY]].filter(Boolean).join(' '),
+    };
+  }
+
+  function wireProviderFormContacts() {
+    document.getElementById('providerFormCreateContactBtn').addEventListener('click', () => {
+      const editingId = state.providerFormEditingId;
+      const rec = editingId ? CPR_PRESCRIBERS.find((r) => r.id === editingId) : null;
+      contactsModal.open = true;
+      contactsModal.mode = 'provider';
+      contactsModal.view = 'form';
+      contactsModal.editingId = 'new';
+      contactsModal.formValues = Object.assign({ org_type: '', referral_source: false }, providerFormContactDefaults());
+      contactsModal.onCreated = (id) => {
+        if (rec) rec.contactIds = (rec.contactIds || []).concat([id]);
+        else state.providerFormStagedContactIds = (state.providerFormStagedContactIds || []).concat([id]);
+        renderProviderFormContacts();
+      };
+      renderContactsModal();
+      document.getElementById('contactsOverlay').style.display = 'flex';
+    });
+    document.querySelectorAll('[data-provider-form-detach-contact]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const cid = btn.dataset.providerFormDetachContact;
+        const editingId = state.providerFormEditingId;
+        if (editingId) {
+          const rec = CPR_PRESCRIBERS.find((r) => r.id === editingId);
+          if (rec) rec.contactIds = (rec.contactIds || []).filter((x) => x !== cid);
+        } else {
+          state.providerFormStagedContactIds = (state.providerFormStagedContactIds || []).filter((x) => x !== cid);
+        }
+        renderProviderFormContacts();
+      });
+    });
   }
 
   function wireProviderFormSelects(values) {
@@ -2406,6 +2642,7 @@
       }
       if (state.providerSearchMode === 'add' && providerAlreadyLinked(editingId)) {
         state.providerFormEditingId = null;
+        state.providerFormStagedContactIds = [];
         closeProviderSearch();
         toast('Record updated — already assigned to this patient, no change to the care team');
         return;
@@ -2429,6 +2666,7 @@
       });
       p.origin = editingId ? 'cpr' : 'draft';
       p.cprId = editingId || null;
+      p.stagedContactIds = (p.stagedContactIds || []).concat(state.providerFormStagedContactIds || []);
       state.providerMatchSelectedId = editingId || 'new';
     } else {
       // 'add' mode genuinely appends a distinct new provider — that's the
@@ -2436,6 +2674,7 @@
       const p = makeProvider('draft', null, null);
       p.origin = editingId ? 'cpr' : 'draft';
       p.cprId = editingId || null;
+      p.stagedContactIds = (p.stagedContactIds || []).concat(state.providerFormStagedContactIds || []);
       providerFields(p).forEach((f) => {
         const v = values[f.key];
         if (v !== undefined && v !== '' && v !== false) state.fieldOverrides[f._key] = v;
@@ -2444,6 +2683,7 @@
     }
     renumberProviders();
     state.providerFormEditingId = null;
+    state.providerFormStagedContactIds = [];
     closeProviderSearch();
     renderForm();
     syncPrescribedProvider();
