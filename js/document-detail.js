@@ -2186,8 +2186,6 @@
     document.getElementById('rejectOverlay').style.display = state.rejectOpen ? 'flex' : 'none';
     document.getElementById('submitConfirmOverlay').style.display = state.submitConfirmOpen ? 'flex' : 'none';
     if (state.submitConfirmOpen) {
-      const patientName = (ext.patient_information.patient_first_name.value + ' ' + ext.patient_information.patient_last_name.value).trim() || 'this patient';
-      document.getElementById('submitConfirmPatientName').textContent = patientName;
       document.getElementById('submitConfirmMrn').textContent = mrnFor(doc._id);
     }
     if (state.reclassifyOpen) {
