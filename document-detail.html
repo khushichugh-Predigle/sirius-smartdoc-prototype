@@ -338,6 +338,23 @@
           </div>
         </div>
 
+        <!-- Save & submit confirmation — informational only, shows the patient's MRN -->
+        <div class="reclassify-overlay" id="submitConfirmOverlay" style="display:none">
+          <div class="reclassify-modal" role="dialog" aria-modal="true">
+            <div class="reclassify-head"><h3>Submitted for Review</h3>
+              <button type="button" class="reclassify-close" id="submitConfirmCloseBtn" aria-label="Close">&times;</button>
+            </div>
+            <div class="reclassify-body">
+              <p class="reject-lead">This document has been saved and submitted for <b id="submitConfirmPatientName"></b>. For your reference, here's their Medical Record Number (MRN):</p>
+              <div class="reclassify-field"><label>Medical Record Number (MRN)</label><div class="patient-view-value" id="submitConfirmMrn" style="font-weight:700;letter-spacing:.3px"></div></div>
+            </div>
+            <div class="reclassify-foot">
+              <span></span>
+              <button class="btn primary" type="button" id="submitConfirmDoneBtn">Done</button>
+            </div>
+          </div>
+        </div>
+
         <!-- Claim-gate modal (shown when an unclaimed doc's fields are clicked) -->
         <div class="reclassify-overlay" id="claimGateOverlay" style="display:none">
           <div class="reclassify-modal" role="dialog" aria-modal="true">

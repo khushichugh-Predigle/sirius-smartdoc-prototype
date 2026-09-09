@@ -67,6 +67,7 @@
     rejectOpen: false,
     reclassifyOpen: false,
     reclassifyTo: null,
+    submitConfirmOpen: false,
     zoom: 100,
     rotation: 0,
     extraDrugSubsections: [],     // subsection clones added via "Add Drug"
@@ -78,6 +79,14 @@
   }
   function escapeHtml(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+  // No real MRN exists on a document/patient anywhere in the dummy data —
+  // derived the same way activeHighlightBand/npi-card seeds are: a stable
+  // hash of the document id, formatted to match the "HC1xxxx" MRNs already
+  // shown elsewhere (side panel case list, match candidates).
+  function mrnFor(id) {
+    const seed = String(id).split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+    return 'HC1' + String(1000 + (seed % 9000)).padStart(4, '0');
   }
   function statusTheme(status) {
     const v = status.toLowerCase();
@@ -2175,6 +2184,12 @@
   function renderModals() {
     document.getElementById('reclassifyOverlay').style.display = state.reclassifyOpen ? 'flex' : 'none';
     document.getElementById('rejectOverlay').style.display = state.rejectOpen ? 'flex' : 'none';
+    document.getElementById('submitConfirmOverlay').style.display = state.submitConfirmOpen ? 'flex' : 'none';
+    if (state.submitConfirmOpen) {
+      const patientName = (ext.patient_information.patient_first_name.value + ' ' + ext.patient_information.patient_last_name.value).trim() || 'this patient';
+      document.getElementById('submitConfirmPatientName').textContent = patientName;
+      document.getElementById('submitConfirmMrn').textContent = mrnFor(doc._id);
+    }
     if (state.reclassifyOpen) {
       document.getElementById('reclassifyFrom').textContent = state.documentType;
       document.getElementById('reclassifyTo').textContent = state.reclassifyTo;
@@ -2768,7 +2783,11 @@ function wireModals() {
       if (refVal) parts.push('Referral Source synced to records → Patient Demographics');
       if (provMsgs.length) parts.push(...provMsgs);
       toast(parts.join(' · ') + ' (simulated)');
+      state.submitConfirmOpen = true;
+      renderModals();
     });
+    document.getElementById('submitConfirmCloseBtn').addEventListener('click', () => { state.submitConfirmOpen = false; renderModals(); });
+    document.getElementById('submitConfirmDoneBtn').addEventListener('click', () => { state.submitConfirmOpen = false; renderModals(); });
     // Plain Save — persists field edits and draft provider rows without
     // writing new records prescriber records. Drafts survive as "New — pending".
     document.getElementById('saveDraftBtn').addEventListener('click', () => {
