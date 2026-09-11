@@ -90,12 +90,14 @@
 .match-status-inactive { color: #b42318; background: #fef3f2; border-color: #fecdca; }
 .match-status-pending { color: #b54708; background: #fffaeb; border-color: #fedf89; }
 
-/* Unconfirmed match — warm the whole card so it reads as "needs review",
-   not a resolved/confirmed state. Reuses --warn tokens already established
-   elsewhere (.reclassify-banner, .callout.warn, .bdg.warn). */
-.match-accordion.alert { border-color: var(--warn); background: var(--warn-bg); box-shadow: 0 1px 2px rgba(217,119,6,0.15); }
-.match-head.alert { background: transparent; border-color: transparent; box-shadow: none; }
-.match-ico.alert { background: #fde68a; color: var(--warn-tx); }
+/* Unconfirmed match — warm only the header so it reads as "needs review",
+   not a resolved/confirmed state. The candidate list underneath stays on
+   the plain card background so the warm tint doesn't bleed into it once
+   expanded. Reuses --warn tokens already established elsewhere
+   (.reclassify-banner, .callout.warn, .bdg.warn), just at a lighter tint. */
+.match-accordion.alert { border-color: var(--warn); box-shadow: 0 1px 2px rgba(217,119,6,0.12); }
+.match-head.alert { background: #fffbeb; border-color: transparent; box-shadow: none; }
+.match-ico.alert { background: var(--warn-bg); color: var(--warn-tx); }
 .match-accordion.alert .match-t1 { color: var(--warn-tx); }
 .match-accordion.alert .match-t2 { color: var(--warn-tx); opacity: 0.85; }
 .match-accordion.alert .match-chevron { border-color: var(--warn-tx); opacity: 0.7; }
