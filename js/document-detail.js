@@ -47,6 +47,7 @@
     // collapsed summary row already names. Expand only shows on request.
     matchExpanded: false,
     matchSelectedId: 'm1',
+    matchConfirmed: false,  // becomes true once the reviewer actually clicks a match/create-new option
     // Provider matching is a separate decision from patient matching — these
     // were one shared pair before, so picking a provider silently rewrote the
     // patient selection.
@@ -926,17 +927,31 @@
       wrap.style.display = 'none';
       return;
     }
-    const title = 'Patient match found';
-    const subtitle = 'Review and confirm the matching patient record.';
     const selected = MATCH_CANDIDATES.find((c) => c.id === state.matchSelectedId);
-    const headerInner = selected
-      ? `<span class="match-selected-summary"><span class="match-selected-main"><span class="match-selected-name">${escapeHtml(selected.name)}</span><span class="match-selected-meta">${escapeHtml(selected.meta)}</span></span></span>`
-      : `<span class="match-tt"><span class="match-t1">${title}</span><span class="match-t2">${subtitle}</span></span>`;
+    // Unconfirmed: a candidate is pre-suggested (matchSelectedId defaults to
+    // the top match) so it's ready the moment the reviewer picks it, but the
+    // header stays flagged as needing attention until they actually click
+    // something — it should never read as already resolved by default.
+    let iconInner, headerInner, headState;
+    if (!state.matchConfirmed) {
+      const n = MATCH_CANDIDATES.length;
+      iconInner = ic('alert');
+      headerInner = `<span class="match-tt"><span class="match-t1">Confirm patient match</span><span class="match-t2">${n} patient match${n === 1 ? '' : 'es'} found</span></span>`;
+      headState = 'alert';
+    } else if (state.matchSelectedId === 'new') {
+      iconInner = ic('plus');
+      headerInner = `<span class="match-selected-summary"><span class="match-selected-main"><span class="match-selected-name">New patient record</span><span class="match-selected-meta">Will be created on Save &amp; submit</span></span><span class="bdg warn">Pending</span></span>`;
+      headState = 'sel';
+    } else {
+      iconInner = '✓';
+      headerInner = `<span class="match-selected-summary"><span class="match-selected-main"><span class="match-selected-name">${escapeHtml(selected.name)}</span><span class="match-selected-meta">${escapeHtml(selected.meta)}</span></span></span>`;
+      headState = 'sel';
+    }
 
     wrap.innerHTML = `
-      <div class="match-accordion${state.matchExpanded ? ' open' : ''}">
-        <button type="button" class="match-head${selected ? ' sel' : ''}" id="matchToggleBtn">
-          <span class="match-ico${selected ? ' sel' : ''}">✓</span>
+      <div class="match-accordion${state.matchExpanded ? ' open' : ''}${headState === 'alert' ? ' alert' : ''}">
+        <button type="button" class="match-head ${headState}" id="matchToggleBtn">
+          <span class="match-ico ${headState}">${iconInner}</span>
           ${headerInner}
           <span class="match-chevron"></span>
         </button>
@@ -958,11 +973,20 @@
 
     document.getElementById('matchToggleBtn').addEventListener('click', () => { state.matchExpanded = !state.matchExpanded; renderMatchAccordion(); });
     wrap.querySelectorAll('input[name="matchChoice"]').forEach((r) => {
-      r.addEventListener('change', (e) => {
+      // 'click' (not 'change') so re-picking the pre-suggested top candidate
+      // still counts as confirming it — a native radio's 'change' event
+      // doesn't fire when the clicked option was already checked.
+      r.addEventListener('click', (e) => {
         state.matchSelectedId = e.target.dataset.id;
+        state.matchConfirmed = true;
         // Collapse back down once a choice is made — the accordion's job is
         // just to confirm the match, not stay open and compete for attention.
         state.matchExpanded = false;
+        if (state.matchSelectedId === 'new') {
+          toast('New patient record will be created on Save & submit');
+          renderForm();
+          return;
+        }
         // "Existing matching patient selected -> populate Referral Source from
         // records" (the user can still change it afterward — see field markup).
         const candidate = MATCH_CANDIDATES.find((c) => c.id === state.matchSelectedId);
