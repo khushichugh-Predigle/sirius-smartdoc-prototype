@@ -1231,8 +1231,8 @@
     const body = items.length
       ? `<div class="referral-notes-list">${items.slice().reverse().map((n) => `
           <div class="cmt-card">
-            <div class="cmt-body">${escapeHtml(n.text)}</div>
             <div class="cmt-meta"><span>${escapeHtml(n.createdBy)}</span><span>&middot;</span><span>${escapeHtml(n.createdOn)}</span></div>
+            <div class="cmt-body">${escapeHtml(n.text)}</div>
           </div>`).join('')}</div>`
       : `<div class="cmt-empty">${ic('chat')}<span>No referral notes yet</span></div>`;
     return `<section class="subsection${collapsed ? ' collapsed' : ''}" data-sub-id="referralNotesHistory">

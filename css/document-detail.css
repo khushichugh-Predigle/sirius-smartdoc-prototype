@@ -275,3 +275,8 @@
    columns instead of stacking. */
 .referral-notes-list { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 8px; }
 .subsection-body > .cmt-empty { grid-column: 1 / -1; }
+/* Author/date read before the note text, not after — .cmt-meta's base
+   margin-top assumes it trails the body (css/v64-components.css); here it
+   leads, so the spacing and emphasis flip to match. */
+.referral-notes-list .cmt-meta { margin-top: 0; margin-bottom: 5px; font-weight: 700; }
+.referral-notes-list .cmt-meta span:first-child { color: var(--t2); }
