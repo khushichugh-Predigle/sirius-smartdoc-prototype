@@ -73,6 +73,7 @@
     rotation: 0,
     extraDrugSubsections: [],     // subsection clones added via "Add Drug"
     fieldOverrides: {},           // fieldKey -> value the reviewer typed
+    referralNotesHistory: [],     // {createdOn, createdBy, text} — immutable once added, seeded per-doc
   };
 
   function titleCase(v) {
@@ -214,6 +215,7 @@
     sec.fields.forEach((f) => { f._key = 'top__' + f.key; f._value = ''; });
     (sec.subsections || []).forEach((sub) => annotateSubsection(sub, ctx));
   });
+  const REFERRAL_NOTES_FIELD_KEY = SCHEMA.sections.find((s) => s.title === 'Referral Notes').fields[0]._key;
 
   /* ================= Provider instances =================
    * The schema already declares this section as a repeating list — see the
@@ -451,6 +453,33 @@
     state.providers = [extracted];
     renumberProviders();
     syncPrescribedProvider();
+  }
+
+  /* Referral Notes history — seeded per-document so "may or may not have
+   * history" is demonstrable without typing anything first. A brand-new
+   * patient (no CPR+ record) can't have prior notes, so this is ignored in
+   * favor of an empty list once the reviewer confirms "Create a new patient
+   * record" on the match accordion — see referralNotesHistoryMarkup(). */
+  const REFERRAL_NOTE_SAMPLES = [
+    'Confirmed dosing schedule with prescriber’s office — no changes from referral.',
+    'Left voicemail for patient re: insurance verification; awaiting callback.',
+    'Spoke with office manager — updated fax number on file for this practice.',
+    'Patient requested afternoon delivery window; noted for scheduling.',
+    'Clarified site of service with case manager — infusion suite confirmed.',
+  ];
+  function initReferralNotes() {
+    const seed = String(doc._id).split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+    const count = seed % 3; // 0, 1 or 2 seeded notes, deterministic per document
+    const notes = [];
+    for (let i = 0; i < count; i++) {
+      const stamp = AuditStamp.stampFor(doc._id + ':note:' + i);
+      notes.push({
+        createdOn: new Date(stamp.createdTs).toLocaleString(),
+        createdBy: stamp.updatedBy,
+        text: REFERRAL_NOTE_SAMPLES[(seed + i * 7) % REFERRAL_NOTE_SAMPLES.length],
+      });
+    }
+    state.referralNotesHistory = notes;
   }
 
   /* ---------- Left rail ---------- */
@@ -1040,8 +1069,10 @@
     const disabled = claimState.isReadOnly && !claimState.isGated;
     const dis = disabled ? 'disabled' : '';
     switch (field.type) {
-      case 'textarea':
-        return `<textarea data-key="${field._key}" rows="4" placeholder="Enter value" ${dis}>${escapeHtml(val)}</textarea>`;
+      case 'textarea': {
+        const maxAttr = field.maxLength ? ` maxlength="${field.maxLength}"` : '';
+        return `<textarea data-key="${field._key}" rows="${field.rows || 4}" placeholder="${field.placeholder ? escapeHtml(field.placeholder) : 'Enter value'}"${maxAttr} ${dis}>${escapeHtml(val)}</textarea>`;
+      }
       case 'date':
         return `<div class="date-control"><input type="text" data-key="${field._key}" value="${escapeHtml(val)}" placeholder="MM/DD/YYYY" ${dis} /></div>`;
       case 'select': {
@@ -1139,6 +1170,13 @@
     return '';
   }
 
+  function fieldCharCountMarkup(field) {
+    if (!field.maxLength) return '';
+    const override = state.fieldOverrides[field._key];
+    const val = override !== undefined ? override : (field._value == null ? '' : field._value);
+    return `<div class="field-charcount" data-charcount-for="${field._key}">${String(val).length}/${field.maxLength}</div>`;
+  }
+
   function fieldMarkup(field) {
     const wide = field.type === 'textarea';
     // Checkbox fields render their own label text inline next to the box
@@ -1154,6 +1192,7 @@
         ${evidenceMarkup(field)}
       </label>` : ''}
       ${fieldControlMarkup(field)}
+      ${fieldCharCountMarkup(field)}
       ${providerFieldSourceRow(field)}
     </div>`;
   }
@@ -1174,6 +1213,35 @@
         <span class="subsection-chevron"></span>
       </button>
       <div class="subsection-body">${fieldsHtml}${childHtml}</div>
+    </section>`;
+  }
+
+  // Reuses the app's existing comment-card component (.cmt-card/.cmt-body/
+  // .cmt-meta/.cmt-empty, css/v64-components.css) — built for exactly this
+  // shape (author + timestamp + text, plus an empty state) but not wired
+  // into any page yet. Wrapped in the same .subsection shell as every other
+  // grouped block in this form, so it collapses via the existing generic
+  // [data-toggle] wiring in wireFormEvents() — no new JS needed for that.
+  function referralNotesHistoryMarkup() {
+    // A not-yet-created patient can't have prior notes — ignore any seeded
+    // history once the reviewer confirms "Create a new patient record".
+    const isNewPatient = state.matchConfirmed && state.matchSelectedId === 'new';
+    const items = isNewPatient ? [] : state.referralNotesHistory;
+    const collapsed = !!state.collapsed.referralNotesHistory;
+    const body = items.length
+      ? `<div class="referral-notes-list">${items.slice().reverse().map((n) => `
+          <div class="cmt-card">
+            <div class="cmt-body">${escapeHtml(n.text)}</div>
+            <div class="cmt-meta"><span>${escapeHtml(n.createdBy)}</span><span>&middot;</span><span>${escapeHtml(n.createdOn)}</span></div>
+          </div>`).join('')}</div>`
+      : `<div class="cmt-empty">${ic('chat')}<span>No referral notes yet</span></div>`;
+    return `<section class="subsection${collapsed ? ' collapsed' : ''}" data-sub-id="referralNotesHistory">
+      <button type="button" class="subsection-head" data-toggle="referralNotesHistory">
+        <span class="subsection-copy"><span class="subsection-title">History</span></span>
+        <span class="subsection-count">${items.length} note${items.length === 1 ? '' : 's'}</span>
+        <span class="subsection-chevron"></span>
+      </button>
+      <div class="subsection-body">${body}</div>
     </section>`;
   }
 
@@ -1266,6 +1334,7 @@
     document.getElementById('formSectionTitle').textContent = sec.title;
     const isDrugSection = sec.title === 'Drug Orders';
     const isProviderSection = sec.title === 'M.D./Providers';
+    const isReferralNotesSection = sec.title === 'Referral Notes';
     document.getElementById('addDrugBtn').style.display = isDrugSection ? 'inline-flex' : 'none';
     document.getElementById('addProviderBtn').style.display = isProviderSection ? 'inline-flex' : 'none';
 
@@ -1273,6 +1342,8 @@
     let subsectionsHtml;
     if (isProviderSection) {
       subsectionsHtml = state.providers.map(providerCardMarkup).join('');
+    } else if (isReferralNotesSection) {
+      subsectionsHtml = referralNotesHistoryMarkup();
     } else {
       subsectionsHtml = (sec.subsections || []).map((s) => subsectionMarkup(s, 0)).join('');
     }
@@ -1307,6 +1378,10 @@
       el.addEventListener('input', (e) => {
         state.fieldOverrides[e.target.dataset.key] = e.target.value;
         markProviderEdited(e.target.dataset.key);
+        if (e.target.maxLength > 0) {
+          const counter = document.querySelector(`[data-charcount-for="${e.target.dataset.key}"]`);
+          if (counter) counter.textContent = `${e.target.value.length}/${e.target.maxLength}`;
+        }
       });
     });
     document.querySelectorAll('.evidence-badge').forEach((btn) => {
@@ -2800,6 +2875,20 @@ function wireModals() {
       // Promote drafts to cpr on submit (they now exist in records).
       newDrafts.forEach((p) => { p.origin = 'cpr'; });
       updatedCpr.forEach((p) => { p.edited = false; });
+      // Referral Notes: whatever's typed in the compose box becomes a new,
+      // immutable history row on submit (and is what "sends to CPR+" and
+      // saves to the case record — simulated, like everything else here, so
+      // no separate confirmation for it).
+      const draftNote = (state.fieldOverrides[REFERRAL_NOTES_FIELD_KEY] || '').trim();
+      if (draftNote) {
+        state.referralNotesHistory.push({
+          createdOn: new Date().toLocaleString(),
+          createdBy: 'Khushi C.',
+          text: draftNote,
+        });
+        delete state.fieldOverrides[REFERRAL_NOTES_FIELD_KEY];
+        if (SCHEMA.sections[state.activeSectionIndex].title === 'Referral Notes') renderForm();
+      }
       renderSummaryBand();
       const parts = ['Saved & submitted'];
       if (refVal) parts.push('Referral Source synced to records → Patient Demographics');
@@ -2864,6 +2953,7 @@ function wireModals() {
     wireModals();
     wireClaimGate();
     initProviders();
+    initReferralNotes();
     // matchSelectedId defaults to 'm1' (§1e of the exploration — the patient
     // accordion always opens pre-selected), so the care team loads up front
     // exactly as it would after the user confirms the match.

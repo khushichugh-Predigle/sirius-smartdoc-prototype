@@ -262,3 +262,16 @@
 .contact-row-actions button:disabled { color: var(--t4); cursor: not-allowed; opacity: 0.55; }
 .contact-row-actions button:disabled:hover { background: transparent; }
 .referral-flag-off { color: var(--t4); font-size: 10.5px; }
+
+/* Referral Notes — live char counter for any maxLength textarea (also
+   benefits the existing Prescriber "Notes" field, which had maxLength:250
+   but no visible counter until now). */
+.field-charcount { margin-top: 3px; text-align: right; font-size: 10.5px; color: var(--t4); }
+
+/* History list: .cmt-card/.cmt-empty (css/v64-components.css) are plain
+   flex blocks, not grid items — .subsection-body is a
+   repeat(auto-fill, minmax(230px,1fr)) grid, so without this wrapper
+   spanning the full row, multiple notes would sit side by side in ~230px
+   columns instead of stacking. */
+.referral-notes-list { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 8px; }
+.subsection-body > .cmt-empty { grid-column: 1 / -1; }

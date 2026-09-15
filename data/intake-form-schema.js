@@ -5328,6 +5328,49 @@ window.INTAKE_FORM_SCHEMA = {
       "footer": {
         "buttons": []
       }
+    },
+    {
+      "id": "f3d1c9a7-6b52-4e0e-9f7a-2d5c8e41b0a6",
+      "title": "Referral Notes",
+      "subtitle": "",
+      "description": "",
+      "order": 5,
+      "fields": [
+        {
+          "key": "8e2f4a91-3c6d-4b17-a0e9-5f7d2c918e64",
+          "type": "textarea",
+          "label": "Notes",
+          "required": false,
+          "hint": "",
+          "description": "",
+          "prefixIcon": "",
+          "suffixIcon": "",
+          "hintIcon": "",
+          "conditions": [],
+          "order": 1,
+          "placeholder": "Add a note…",
+          "pattern": "",
+          "layout": {
+            "col": 12
+          },
+          "title": "",
+          "subtitle": "",
+          "badgeText": "",
+          "emptyCtaTitle": "",
+          "addButtonLabel": "",
+          "removeButtonLabel": "",
+          "items": [],
+          "options": [],
+          "columns": [],
+          "nestedFields": [],
+          "rows": 3,
+          "maxLength": 250
+        }
+      ],
+      "subsections": [],
+      "footer": {
+        "buttons": []
+      }
     }
   ]
 };
