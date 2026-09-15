@@ -7,14 +7,13 @@
 <path d="M6.07717 67.565C6.61841 67.565 7.05717 67.1262 7.05717 66.585C7.05717 66.0437 6.61841 65.605 6.07717 65.605C5.53593 65.605 5.09717 66.0437 5.09717 66.585C5.09717 67.1262 5.53593 67.565 6.07717 67.565Z" fill="#ECECED"/>
 <path d="M89.5171 4.86479C90.0583 4.86479 90.4971 4.42603 90.4971 3.88479C90.4971 3.34355 90.0583 2.90479 89.5171 2.90479C88.9759 2.90479 88.5371 3.34355 88.5371 3.88479C88.5371 4.42603 88.9759 4.86479 89.5171 4.86479Z" fill="#ECECED"/>
 <path d="M62.3571 107.735C82.626 107.735 99.0571 106.714 99.0571 105.455C99.0571 104.196 82.626 103.175 62.3571 103.175C42.0883 103.175 25.6571 104.196 25.6571 105.455C25.6571 106.714 42.0883 107.735 62.3571 107.735Z" fill="#F0F1F1"/>
-<!-- Content: a single empty list card — no rows filled in yet -->
-<rect x="34" y="21" width="68" height="66" rx="8" fill="white" stroke="#CECFD2" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M34 37H102" stroke="#CECFD2" stroke-linecap="round" stroke-linejoin="round"/>
-<path d="M46 29H62" stroke="#CECFD2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-<circle cx="45" cy="51" r="2.6" fill="#E3E4E6"/>
-<path d="M54 51H90" stroke="#E3E4E6" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0.5 6.5"/>
-<circle cx="45" cy="63" r="2.6" fill="#E3E4E6"/>
-<path d="M54 63H84" stroke="#E3E4E6" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0.5 6.5"/>
-<circle cx="45" cy="75" r="2.6" fill="#E3E4E6"/>
-<path d="M54 75H90" stroke="#E3E4E6" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="0.5 6.5"/>
+<!-- Content: an empty document stack — same layered-card language as
+     no-data.svg's row stack, without the search glass or filled rows,
+     since neither Providers nor Drugs involves a search. -->
+<rect x="44" y="16" width="58" height="54" rx="8" fill="#FAFAFB" stroke="#E7E8EA" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="40" y="22" width="60" height="56" rx="8" fill="white" stroke="#DCDDE0" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="36" y="28" width="62" height="58" rx="8" fill="white" stroke="#CECFD2" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="46" y="42" width="40" height="4" rx="2" fill="#E3E4E6"/>
+<rect x="46" y="54" width="32" height="4" rx="2" fill="#E3E4E6"/>
+<rect x="46" y="66" width="40" height="4" rx="2" fill="#E3E4E6"/>
 </svg>
